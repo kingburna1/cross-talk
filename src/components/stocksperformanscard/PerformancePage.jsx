@@ -42,7 +42,7 @@ const StockPerformanceMetricsCard = ({ metricsData }) => {
           const netChange = data.profit - data.loss;
           const isProfit = netChange >= 0;
           const profitClass = isProfit ? 'text-green-600' : 'text-red-600';
-          const icon = isProfit ? ArrowTrendingUpIcon : ArrowTrendingDownIcon;
+          // const isIcon = isProfit ? ArrowTrendingUpIcon : ArrowTrendingDownIcon;
 
           return (
             <div
@@ -66,7 +66,7 @@ const StockPerformanceMetricsCard = ({ metricsData }) => {
                         >
                             {isProfit ? '+' : '-'}${Math.abs(netChange).toFixed(2).toLocaleString()}
                         </motion.span>
-                        <icon className={`w-5 h-5 ml-2 ${profitClass}`} />
+                        < isIcon className={`w-5 h-5 ml-2 ${profitClass}`} />
                     </div>
                 </div>
 

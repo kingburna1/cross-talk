@@ -2,7 +2,8 @@
 import React from 'react';
 import { PencilSquareIcon } from '@heroicons/react/24/solid'; 
 
-const SupplierCard = ({ supplier }) => {
+// 1. Accept the onEdit function as a prop
+const SupplierCard = ({ supplier, onEdit }) => { 
   const {
     name,
     address,
@@ -14,9 +15,16 @@ const SupplierCard = ({ supplier }) => {
     secondContact,
   } = supplier;
 
+  // 2. Update the handler to call the passed onEdit function
   const handleEditClick = (e) => {
     e.stopPropagation(); 
-    console.log(`Editing Supplier: ${name}`);
+    // Instead of just logging, we call the function passed from the parent
+    // and give it the current supplier object so the parent knows what to edit.
+    if (onEdit) {
+      onEdit(supplier); 
+    } else {
+      console.log(`Editing Supplier: ${name} (No onEdit handler provided)`);
+    }
   };
 
   return (
@@ -89,7 +97,7 @@ const SupplierCard = ({ supplier }) => {
         </div>
         
         {/* Edit Button (Hidden on mobile, visible on md+ as the last element) */}
-        <button
+       <button
           onClick={handleEditClick}
           className="hidden md:flex p-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-full transition duration-150 items-center justify-center h-10 w-10 shrink-0 ml-4"
           aria-label="Edit Supplier"

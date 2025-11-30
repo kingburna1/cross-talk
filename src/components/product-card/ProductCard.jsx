@@ -4,7 +4,8 @@ import Image from "next/image";
 
 import { PencilSquareIcon } from "@heroicons/react/24/solid";
 
-const ProductCard = ({ product }) => {
+// 1. Accept the onEdit function as a prop
+const ProductCard = ({ product, onEdit }) => { 
   const {
     imageSrc,
     name,
@@ -19,10 +20,14 @@ const ProductCard = ({ product }) => {
 
   const isLowStock = qtyLeft <= 10;
 
-  // Function to handle the edit click
+  // 2. Update the handler to call the passed onEdit function
   const handleEditClick = () => {
-    console.log(`Editing product: ${name}`);
-    // Add your routing or state logic here (e.g., router.push('/edit/' + product.id))
+    // Call the function passed from the parent and provide the product data
+    if (onEdit) {
+      onEdit(product);
+    } else {
+      console.log(`Editing product: ${name} (No onEdit handler provided)`);
+    }
   };
 
   return (
@@ -108,7 +113,7 @@ const ProductCard = ({ product }) => {
         </div>
 
         {/* Edit Button */}
-        <button
+       <button
           onClick={handleEditClick}
           className="ml-0 md:ml-4 p-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-full transition duration-150 flex items-center justify-center h-10 w-10 shrink-0"
           aria-label="Edit Product"
