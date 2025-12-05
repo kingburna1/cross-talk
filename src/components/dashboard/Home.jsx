@@ -1,9 +1,10 @@
 import React from "react";
+import AiAssistant from "../aiassistance/AiAssistant";
 
 const Home = () => {
   return (
     <div>
-      <div>
+      {/* <div>
         <h1 className="flex text-center justify-center text-md md:text-2xl font-bold text-green-500">
           Store Inventory{" "}
         </h1>
@@ -47,7 +48,9 @@ const Home = () => {
         </h3>
 
         </div>
-      </div>
+      </div> */}
+
+        <AiAssistant/>
     </div>
   );
 };

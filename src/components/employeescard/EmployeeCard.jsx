@@ -10,6 +10,7 @@ import {
   CreditCardIcon,
 } from "@heroicons/react/20/solid";
 import Image from "next/image";
+import { TrashIcon } from "@heroicons/react/24/solid";
 
 const employeeCardVariants = {
   hidden: { opacity: 0, y: 30 },
@@ -28,10 +29,25 @@ const DetailItem = ({ icon: Icon, label, value, className = "" }) => (
   </div>
 );
 
-const EmployeeCard = ({ employee }) => {
+      // ACCEPT THE ONEDIT PROP
+const EmployeeCard = ({ employee, onEdit,onDelete }) => {
   const handleEdit = () => {
-    alert(`Editing details for ${employee.name}`);
+   
+    if (onEdit) {
+      onEdit(employee);
+    } else {
+      alert(`Editing details for ${employee.name}`);
+    }
   };
+
+    const handleDelete = (e) => {
+        e.stopPropagation(); // Prevent card container clicks if any
+        if (window.confirm(`Are you sure you want to permanently delete ${employee.name}?`)) {
+            if (onDelete) {
+                onDelete(employee.id);
+            }
+        }
+    };
 
   // Format currency and date
   const salaryFormatted = new Intl.NumberFormat("en-US", {
@@ -75,14 +91,25 @@ const EmployeeCard = ({ employee }) => {
           </div>
         </div>
 
-        {/* Edit Button */}
-        <button
-          onClick={handleEdit}
-          className="flex-none p-2 ml-2 sm:p-3 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 transition duration-150"
-          title="Edit Employee Information"
-        >
-          <PencilSquareIcon className="w-5 h-5" />
-        </button>
+       {/* Edit Button */}
+        <div className="flex items-center space-x-2 flex-none">
+                    {/* Edit Button */}
+                    <button
+                        onClick={handleEdit}
+                        className="p-2 sm:p-3 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 transition duration-150"
+                        title="Edit Employee Information"
+                    >
+                        <PencilSquareIcon className="w-5 h-5" />
+                    </button>
+                    {/* Delete Button (NEW) */}
+                    <button
+                        onClick={handleDelete}
+                        className="p-2 sm:p-3 bg-red-50 text-red-600 rounded-full hover:bg-red-100 transition duration-150"
+                        title="Delete Employee"
+                    >
+                        <TrashIcon className="w-5 h-5" />
+                    </button>
+                </div>
       </div>
 
       {/* --- 2. CONTACT & EMPLOYMENT DETAILS (Responsive Grid/Wrap) --- */}

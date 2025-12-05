@@ -1,0 +1,224 @@
+"use client";
+
+import React, { useState } from "react";
+import {
+  XMarkIcon,
+  UserIcon,
+  EnvelopeIcon,
+  PhoneIcon,
+  CalendarIcon,
+  BriefcaseIcon,
+  CurrencyDollarIcon,
+  CreditCardIcon,
+  PencilIcon,
+} from "@heroicons/react/24/outline";
+
+// ✅ FIX: InputField is now defined OUTSIDE the main component.
+const InputField = ({
+  id,
+  label,
+  type = "text",
+  icon: Icon,
+  required = false,
+  min,
+  step,
+  value,
+  onChange,
+}) => (
+  <div>
+    <label
+      htmlFor={id}
+      className="block text-sm font-medium text-gray-700 mb-1"
+    >
+      {label} {required && "*"}
+    </label>
+    <div className="relative">
+      <input
+        id={id}
+        name={id}
+        type={type}
+        value={value ?? ""} // Value is passed as prop
+        onChange={onChange} // Handler is passed as prop
+        required={required}
+        min={min}
+        step={step}
+        autoComplete="off"
+        className="w-full p-2 pl-10 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+      />
+      <Icon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+    </div>
+  </div>
+);
+
+const EditEmployeeForm = ({ employee, onClose, onEmployeeUpdated }) => {
+  // Initialize state with employee data, keep everything as strings for inputs
+  const [formData, setFormData] = useState({
+    ...employee,
+    age: String(employee.age ?? ""),
+    salary: String(employee.salary ?? ""),
+    dateEmployed: new Date(employee.dateEmployed)
+      .toISOString()
+      .substring(0, 10),
+  });
+
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleChange = (e) => {
+    const { id, value } = e.target;
+    setFormData((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setIsSaving(true);
+
+    const updatedEmployee = {
+      ...formData,
+      age: parseInt(formData.age, 10),
+      salary: parseFloat(formData.salary),
+    };
+
+    onEmployeeUpdated(updatedEmployee);
+
+    setTimeout(() => {
+      setIsSaving(false);
+      onClose();
+    }, 500);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto transform transition-all duration-300">
+        {/* Header */}
+        <div className="sticky top-0 bg-white p-5 border-b flex justify-between items-center z-10">
+          <h2 className="text-xl font-bold text-yellow-700 flex items-center">
+            <PencilIcon className="w-6 h-6 mr-2 text-yellow-500" />
+            Edit Employee: {employee.name}
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-full hover:bg-gray-100 transition"
+          >
+            <XMarkIcon className="w-6 h-6 text-gray-500" />
+          </button>
+        </div>
+
+        {/* Form Body */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Basic Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <InputField
+              id="name"
+              label="Full Name"
+              icon={UserIcon}
+              value={formData.name}
+              onChange={handleChange}
+              required
+            />
+            <InputField
+              id="age"
+              label="Age"
+              type="number"
+              icon={CalendarIcon}
+              value={formData.age}
+              onChange={handleChange}
+              required
+              min="16"
+            />
+            <InputField
+              id="phone"
+              label="Phone Contact"
+              icon={PhoneIcon}
+              value={formData.phone}
+              onChange={handleChange}
+              required
+            />
+            <InputField
+              id="email"
+              label="Email Address"
+              type="email"
+              icon={EnvelopeIcon}
+              value={formData.email}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          {/* Job Details */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+            <InputField
+              id="post"
+              label="Position/Post"
+              icon={BriefcaseIcon}
+              value={formData.post}
+              onChange={handleChange}
+              required
+            />
+            <InputField
+              id="dateEmployed"
+              label="Date Employed"
+              type="date"
+              icon={CalendarIcon}
+              value={formData.dateEmployed}
+              onChange={handleChange}
+              required
+            />
+            <InputField
+              id="salary"
+              label="Annual Salary ($)"
+              type="number"
+              icon={CurrencyDollarIcon}
+              value={formData.salary}
+              onChange={handleChange}
+              required
+              min="0"
+              step="0.01"
+            />
+
+            {/* Payment Means Select */}
+            <div>
+              <label
+                htmlFor="paymentMeans"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Payment Means
+              </label>
+              <div className="relative">
+                <select
+                  id="paymentMeans"
+                  name="paymentMeans"
+                  value={formData.paymentMeans}
+                  onChange={handleChange}
+                  className="w-full p-2 pl-10 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 appearance-none bg-white"
+                >
+                  <option>Bank Transfer (Monthly)</option>
+                  <option>Bank Transfer (Bi-Weekly)</option>
+                  <option>Mobile Pay (Bi-Weekly)</option>
+                  <option>Cash (Weekly)</option>
+                </select>
+                <CreditCardIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              </div>
+            </div>
+          </div>
+
+          {/* Submit Button */}
+          <div className="pt-4 flex justify-end">
+            <button
+              type="submit"
+              disabled={isSaving}
+              className={`flex items-center px-6 py-2 font-semibold rounded-lg transition duration-150 ${
+                isSaving
+                  ? "bg-yellow-400 cursor-not-allowed"
+                  : "bg-yellow-600 hover:bg-yellow-700"
+              } text-white`}
+            >
+              {isSaving ? "Updating..." : "Save Changes"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+export default EditEmployeeForm;

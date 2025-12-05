@@ -32,8 +32,7 @@ const StockPerformanceMetricsCard = ({ metricsData }) => {
         Total Stock Profit & Loss Tracking
       </h2>
 
-      {/* --- Metrics Grid (Super Responsive) --- */}
-      {/* Grid adapts from 1 column to 2 columns (md) and finally 4 columns (lg) */}
+      {/* --- Metrics Grid --- */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {timeRanges.map((range) => {
           const data = safeMetrics[range.key] || { profit: 0, loss: 0 };
@@ -42,7 +41,9 @@ const StockPerformanceMetricsCard = ({ metricsData }) => {
           const netChange = data.profit - data.loss;
           const isProfit = netChange >= 0;
           const profitClass = isProfit ? 'text-green-600' : 'text-red-600';
-          // const isIcon = isProfit ? ArrowTrendingUpIcon : ArrowTrendingDownIcon;
+          
+          // ✅ FIX: Renamed 'isIcon' to 'TrendIcon' (PascalCase)
+          const TrendIcon = isProfit ? ArrowTrendingUpIcon : ArrowTrendingDownIcon;
 
           return (
             <div
@@ -55,7 +56,7 @@ const StockPerformanceMetricsCard = ({ metricsData }) => {
               </div>
               
               <div className="flex flex-col space-y-2 mt-auto">
-                {/* 1. Net Profit/Loss (Prominent) */}
+                {/* 1. Net Profit/Loss */}
                 <div className="border-b border-gray-200 pb-2">
                     <p className="text-xs font-medium text-gray-500 uppercase">Net Change</p>
                     <div className="flex items-center">
@@ -66,7 +67,8 @@ const StockPerformanceMetricsCard = ({ metricsData }) => {
                         >
                             {isProfit ? '+' : '-'}${Math.abs(netChange).toFixed(2).toLocaleString()}
                         </motion.span>
-                        < isIcon className={`w-5 h-5 ml-2 ${profitClass}`} />
+                        {/* ✅ FIX: Using the capitalized component name */}
+                        <TrendIcon className={`w-5 h-5 ml-2 ${profitClass}`} />
                     </div>
                 </div>
 
@@ -96,14 +98,11 @@ const StockPerformanceMetricsCard = ({ metricsData }) => {
 
 // --- Example Usage Data ---
 const exampleMetricsData = {
-    daily: { profit: 1200.50, loss: 150.25 }, // Last 24 Hours
-    weekly: { profit: 8500.75, loss: 900.00 }, // Last 7 Days
-    monthly: { profit: 35000.00, loss: 5200.50 }, // Last 30 Days
-    yearly: { profit: 150000.00, loss: 18000.00 }, // Current Year
+    daily: { profit: 1200.50, loss: 150.25 },
+    weekly: { profit: 8500.75, loss: 900.00 },
+    monthly: { profit: 35000.00, loss: 5200.50 },
+    yearly: { profit: 150000.00, loss: 18000.00 },
 };
-
-// Example for negative net change:
-// const exampleMetricsData = { daily: { profit: 50.00, loss: 150.00 }, ... };
 
 const PerformancePage = () => (
     <div className="p-6 md:p-10 bg-gray-50">

@@ -35,7 +35,7 @@ const SupplierCard = ({ supplier, onEdit }) => {
       <div className="flex items-center justify-between w-full md:w-auto md:pr-4 md:mb-0 mb-3">
         
         {/* 1. Supplier Name and Product (Left Block) */}
-        <div className="supplier-id-info flex flex-col min-w-0 pr-4 shrink-0">
+        <div className="supplier-id-info flex flex-col min-w-0 pr-4">
           <h3 className="text-lg font-bold text-gray-800 truncate">
             {name}
           </h3>

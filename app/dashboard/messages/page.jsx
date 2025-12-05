@@ -15,7 +15,7 @@ const sampleMessage = {
   message: 'I received the package today, but the quantity of "Wireless Ergonomic Mouse" was incorrect. I ordered 10, but only received 8. Please advise on how to resolve this discrepancy as soon as possible.',
   timestamp: new Date().toISOString(),
   isResolved: false,
-  adminRemark: null, // Will hold the remark once submitted
+  adminRemark: null,
 };
 
 const page = () => {

@@ -9,11 +9,6 @@ import {
 } from '@heroicons/react/24/outline';
 import StoreInfoForm from './StoreInfoForm';
 
-// Import Content Components (Defining StoreInfoForm as an example)
-
-// import UsersRoles from './settings/UsersRoles';
-// ... other imports
-
 // --- 1. Settings Categories Definition ---
 const settingsCategories = [
     { key: 'store-info', label: 'Store Information', icon: HomeIcon, component: StoreInfoForm },

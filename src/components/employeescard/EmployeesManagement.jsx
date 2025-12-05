@@ -1,60 +1,174 @@
-// src/components/EmployeesManagement.jsx
-'use client';
-import React, { useMemo } from 'react';
-import { motion } from 'framer-motion';
-import { PlusIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline';
-import EmployeeCard from './EmployeeCard';
+"use client";
+
+import React, { useState, useEffect, useMemo } from "react";
+import { motion } from "framer-motion";
+import { PlusIcon, CurrencyDollarIcon } from "@heroicons/react/24/outline";
+import { useCallback } from "react"; // Added this hook, which was mentioned in the error stack
+
+import EmployeeCard from "./EmployeeCard";
+import AddEmployeeForm from "./AddEmployeeForm";
+import EditEmployeeForm from "./EditEmployeeForm";
+import { useSearchStore } from "../../store/searchStore";
 
 // Updated: Using valid placeholder URLs for images
 const dummyEmployees = [
     {
         id: 1,
-        // FIX: Replaced 'user-a.jpg' with a generic avatar URL
-        image: '/image2.jpg', 
-        name: 'Alex Johnson',
+        image: "/image2.jpg",
+        name: "Alex Johnson",
         age: 32,
-        phone: '555-0123',
-        email: 'alex.j@example.com',
-        dateEmployed: '2020-08-15',
-        post: 'Senior Sales Manager',
+        phone: "555-0123",
+        email: "alex.j@example.com",
+        dateEmployed: "2020-08-15",
+        post: "Senior Sales Manager",
         salary: 65000, // Annual Salary
-        paymentMeans: 'Bank Transfer (Monthly)',
+        paymentMeans: "Bank Transfer (Monthly)",
     },
     {
         id: 2,
-        // FIX: Replaced 'user-b.jpg' with a generic avatar URL
-        image: '/image2.jpg', 
-        name: 'Sarah Chen',
+        image: "/image2.jpg",
+        name: "Sarah Chen",
         age: 25,
-        phone: '555-0456',
-        email: 'sarah.c@example.com',
-        dateEmployed: '2023-01-20',
-        post: 'Inventory Specialist',
+        phone: "555-0456",
+        email: "sarah.c@example.com",
+        dateEmployed: "2023-01-20",
+        post: "Inventory Specialist",
         salary: 42000, // Annual Salary
-        paymentMeans: 'Mobile Pay (Bi-Weekly)',
+        paymentMeans: "Mobile Pay (Bi-Weekly)",
     },
     {
         id: 3,
-        // FIX: Replaced 'user-c.jpg' with a generic avatar URL
-        image: '/image2.jpg', 
-        name: 'Michael B.',
+        image: "/image2.jpg",
+        name: "Michael B.",
         age: 45,
-        phone: '555-0789',
-        email: 'michael.b@example.com',
-        dateEmployed: '2019-05-10',
-        post: 'Store Supervisor',
+        phone: "555-0789",
+        email: "michael.b@example.com",
+        dateEmployed: "2019-05-10",
+        post: "Store Supervisor",
         salary: 78000, // Annual Salary
-        paymentMeans: 'Bank Transfer (Monthly)',
+        paymentMeans: "Bank Transfer (Monthly)",
     },
 ];
 
 // Helper function for currency formatting
 const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+    return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "CFA",
+    }).format(amount);
 };
 
-
 const EmployeesManagement = () => {
+    // ------------------------------------------------------------------
+    // 🛑 ALL HOOKS MUST BE DEFINED HERE, BEFORE ANY CONDITIONAL LOGIC 🛑
+    // ------------------------------------------------------------------
+
+    // 1-4. useState
+    const [employees, setEmployees] = useState(dummyEmployees);
+    const [isAddFormOpen, setIsAddFormOpen] = useState(false);
+    const [editingEmployee, setEditingEmployee] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Get search state (This was the hook that was previously conditional)
+    const { search } = useSearchStore();
+
+    // 5. useEffect
+    // --- EFFECT: Load employees from localStorage on initial load ---
+    useEffect(() => {
+        try {
+            const tempEmployees =
+                JSON.parse(localStorage.getItem("tempEmployees")) || [];
+
+            // Filter out any static dummy employees that might have been saved locally
+            const initialStaticEmployees = dummyEmployees.filter(
+                (e) => !tempEmployees.some((tempE) => tempE.id === e.id)
+            );
+
+            setEmployees([...tempEmployees, ...initialStaticEmployees]);
+        } catch (error) {
+            console.error("Could not load employees from local storage:", error);
+        }
+
+        setIsLoading(false);
+    }, []);
+
+    // Helper to update localStorage with non-static employees
+    // 7. useCallback (Adding this back to clear the 'undefined' error,
+    // though the logic uses it as a simple function for now)
+    const updateLocalStorage = useCallback((currentEmployees) => {
+        const tempEmployeesToSave = currentEmployees.filter((e) => e.id > 100); // Filter out static dummy employees (id 1, 2, 3)
+        localStorage.setItem("tempEmployees", JSON.stringify(tempEmployeesToSave));
+    }, []); // Empty dependency array means this function reference is stable
+
+    // --- SEARCH FILTERING LOGIC (useMemo must be here) ---
+    // 6. useMemo
+    const filteredEmployees = useMemo(() => {
+        if (!search) {
+            return employees; // Show the full employee list
+        }
+
+        const lowerCaseSearch = search.toLowerCase();
+
+        return employees.filter(employee =>
+            // Filter logic: Check if the employee's name or post includes the search text
+            employee.name.toLowerCase().includes(lowerCaseSearch) ||
+            employee.post.toLowerCase().includes(lowerCaseSearch)
+        );
+    }, [search, employees]); // Dependencies: search value and the list of employees
+
+    // --- HANDLERS (using useCallback for stability, helps with hook tracking) ---
+
+    // 1. ADD EMPLOYEE
+    const handleEmployeeAdded = useCallback((newEmployee) => {
+        setEmployees((prevEmployees) => {
+            const updatedEmployees = [newEmployee, ...prevEmployees];
+            updateLocalStorage(updatedEmployees);
+            return updatedEmployees;
+        });
+        setIsAddFormOpen(false);
+    }, [updateLocalStorage]);
+
+    // 2. START EDITING
+    const startEditing = useCallback((employee) => {
+        setEditingEmployee(employee);
+    }, []);
+
+
+     // Handle delete
+  const handleDelete = (id) => {
+    console.log("Deleting employee with id:", id);
+    setEmployees((prev) => prev.filter((emp) => emp.id !== id));
+  };
+
+    // 3. UPDATE EMPLOYEE
+    const handleEmployeeUpdated = useCallback((updatedEmployee) => {
+        setEmployees((prevEmployees) => {
+            const newEmployees = prevEmployees.map((e) =>
+                e.id === updatedEmployee.id ? updatedEmployee : e
+            );
+            updateLocalStorage(newEmployees);
+            return newEmployees;
+        });
+        setEditingEmployee(null); // Close the edit form
+    }, [updateLocalStorage]);
+
+    // --- CALCULATION LOGIC (useMemo) ---
+    const { totalAnnualPayroll, totalMonthlyPayroll } = useMemo(() => {
+        // Calculate payroll based on the *full* list, not the filtered one
+        const totalAnnual = employees.reduce((sum, employee) => sum + employee.salary, 0);
+        const totalMonthly = totalAnnual / 12;
+
+        return {
+            totalAnnualPayroll: totalAnnual,
+            totalMonthlyPayroll: totalMonthly,
+        };
+    }, [employees]); // Dependency: full list of employees
+
+    // ------------------------------------------------------------------
+    // 🛑 END OF HOOKS AND START OF CONDITIONAL RENDERING / JSX 🛑
+    // ------------------------------------------------------------------
+
+
     const containerVariants = {
         hidden: { opacity: 0 },
         visible: {
@@ -65,44 +179,46 @@ const EmployeesManagement = () => {
         },
     };
 
-    const handleAddEmployee = () => {
-        alert("Functionality to add new employee will open here!");
-    };
-
-    // --- CALCULATION LOGIC ---
-    const { totalAnnualPayroll, totalMonthlyPayroll } = useMemo(() => {
-        const totalAnnual = dummyEmployees.reduce((sum, employee) => sum + employee.salary, 0);
-        const totalMonthly = totalAnnual / 12;
-
-        return {
-            totalAnnualPayroll: totalAnnual,
-            totalMonthlyPayroll: totalMonthly,
-        };
-    }, [dummyEmployees]);
-    // -------------------------
-
     const MetricBlock = ({ title, amount, annual }) => (
         <div className="flex-1 min-w-[150px] p-3 rounded-lg bg-white shadow-md border border-gray-200">
             <div className="flex items-center text-gray-700">
-                <CurrencyDollarIcon className={`w-5 h-5 mr-2 ${annual ? 'text-green-600' : 'text-indigo-600'}`} />
+                <CurrencyDollarIcon
+                    className={`w-5 h-5 mr-2 ${
+                        annual ? "text-green-600" : "text-indigo-600"
+                    }`}
+                />
                 <span className="text-sm font-medium text-gray-500">{title}</span>
             </div>
-            <p className={`text-xl sm:text-2xl font-bold mt-1 ${annual ? 'text-green-700' : 'text-indigo-700'}`}>
+            <p
+                className={`text-xl sm:text-2xl font-bold mt-1 ${
+                    annual ? "text-green-700" : "text-indigo-700"
+                }`}
+            >
                 {formatCurrency(amount)}
             </p>
         </div>
     );
 
+    if (isLoading) {
+        return (
+            <div className="p-5 text-center text-gray-500">
+                Loading employee data...
+            </div>
+        );
+    }
+    
+    // Check for empty results after filtering
+    const showNoResults = filteredEmployees.length === 0 && search;
+    
     return (
         <div className="p-4 sm:p-6 bg-gray-50 min-h-screen">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">
-                    Employee Directory ({dummyEmployees.length})
+                    Employee Directory ({filteredEmployees.length})
                 </h1>
-                
                 {/* Button to Add New Employee */}
                 <button
-                    onClick={handleAddEmployee}
+                    onClick={() => setIsAddFormOpen(true)}
                     className="flex items-center px-3 py-2 sm:px-4 sm:py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                 >
                     <PlusIcon className="w-4 h-4 mr-1 sm:mr-2" />
@@ -110,18 +226,38 @@ const EmployeesManagement = () => {
                     <span className="sm:hidden">Add</span>
                 </button>
             </div>
-            
-            <motion.div
-                className="space-y-4"
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-            >
-                {dummyEmployees.map((employee) => (
-                    <EmployeeCard key={employee.id} employee={employee} />
-                ))}
-            </motion.div>
-            
+
+            {search && (
+                <p className="text-sm text-gray-500 mb-4">
+                    Showing results for: <span className="font-semibold text-indigo-600">"{search}"</span>
+                </p>
+            )}
+
+            {showNoResults ? (
+                <div className="text-center p-10 bg-white rounded-xl shadow-md">
+                    <p className="text-lg font-medium text-red-500">
+                        No employees found matching **"{search}"**.
+                    </p>
+                </div>
+            ) : (
+                <motion.div
+                    className="space-y-4"
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="visible"
+                >
+                    {/* ✅ MAP OVER FILTERED EMPLOYEES */}
+                    {filteredEmployees.map((employee) => (
+                        <EmployeeCard
+                            key={employee.id}
+                            employee={employee}
+                            onEdit={startEditing}
+                            onDelete={handleDelete}
+                        />
+                    ))}
+                </motion.div>
+            )}
+
             <hr className="my-6 border-gray-300" />
 
             {/* --- TOTAL PAYROLL SUMMARY --- */}
@@ -130,17 +266,37 @@ const EmployeesManagement = () => {
                 Payroll Financial Summary
             </h2>
             <div className="flex flex-wrap gap-4 justify-between">
-                <MetricBlock 
-                    title="Total Monthly Payroll" 
-                    amount={totalMonthlyPayroll} 
+                <MetricBlock
+                    title="Total Monthly Payroll"
+                    amount={totalMonthlyPayroll}
                     annual={false}
                 />
-                <MetricBlock 
-                    title="Total Annual Payroll" 
-                    amount={totalAnnualPayroll} 
+                <MetricBlock
+                    title="Total Annual Payroll"
+                    amount={totalAnnualPayroll}
                     annual={true}
                 />
             </div>
+
+            {/* --- Modals --- */}
+
+            {/* ADD EMPLOYEE MODAL */}
+            {isAddFormOpen && (
+                <AddEmployeeForm
+                    onClose={() => setIsAddFormOpen(false)}
+                    onEmployeeAdded={handleEmployeeAdded}
+                />
+            )}
+
+            {/* EDIT EMPLOYEE MODAL */}
+            {editingEmployee && (
+                <EditEmployeeForm
+                    employee={editingEmployee}
+                    onClose={() => setEditingEmployee(null)}
+                    onEmployeeUpdated={handleEmployeeUpdated}
+                />
+            )}
+            
         </div>
     );
 };

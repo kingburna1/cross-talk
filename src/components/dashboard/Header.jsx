@@ -24,9 +24,12 @@ import {
   FaCashRegister,
   FaMoneyBillWave,
 } from "react-icons/fa";
+import { useSearchStore } from "../../store/searchStore";
 
 const Header = () => {
   const [open, setOpen] = useState(false);
+
+   const { search, setSearch } = useSearchStore();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const handleMenuClick = () => {
@@ -139,6 +142,8 @@ const Header = () => {
       <div className=" hidden md:flex flex-1 items-center border border-gray-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-500">
         <input
           type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
           placeholder="Search products or sellers name"
           className="px-4 py-2 w-full outline-none"
         />
@@ -161,13 +166,17 @@ const Header = () => {
           <div className="fixed inset-0 bg-gray bg-opacity-50 flex items-center  z-50">
             {/* Popup container */}
             <div className="bg-white w-11/12 max-w-md rounded-xl shadow-lg p-4">
-              <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden">
+              <div className="flex items-center top-0 border border-gray-300 rounded-lg overflow-hidden">
                 <input
                   type="text"
+                   value={search}
+                  onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search products or sellers name"
                   className="px-4 py-2 w-full outline-none"
                 />
-                <button className="bg-green-600 p-3 text-white flex items-center justify-center">
+                <button className="bg-green-600 p-3 text-white flex items-center justify-center"
+                    onClick={() => setOpen(false)}
+                >
                   <IoSearch size={20} />
                 </button>
               </div>
