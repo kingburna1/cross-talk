@@ -6,7 +6,6 @@ const client = new OpenAI({
 
 export async function POST(req) {
   const { message } = await req.json();
-
   const response = await client.chat.completions.create({
     model: "gpt-4.1-mini",     // or any available
     messages: [

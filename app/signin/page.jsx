@@ -3,34 +3,34 @@ import Image from 'next/image';
 import React, { useState } from 'react'; 
 
 // This mock simulates the POST request to your backend's login endpoint.
-const mockLoginApi = (payload) => {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      // Simulate server error/unauthorized (401) for specific inputs
-      if (payload.password === 'badpassword' || payload.email === 'user@unauthorized.com') {
-        resolve({
-          ok: false,
-          status: 401,
-          json: () => Promise.resolve({ 
-            message: 'Invalid credentials. Please check your email and password.' 
-          })
-        });
-        return;
-      }
+// const mockLoginApi = (payload) => {
+//   return new Promise((resolve, reject) => {
+//     setTimeout(() => {
+//       // Simulate server error/unauthorized (401) for specific inputs
+//       if (payload.password === 'badpassword' || payload.email === 'user@unauthorized.com') {
+//         resolve({
+//           ok: false,
+//           status: 401,
+//           json: () => Promise.resolve({ 
+//             message: 'Invalid credentials. Please check your email and password.' 
+//           })
+//         });
+//         return;
+//       }
       
-      // Simulate successful login (HTTP 200 OK) for any valid input
-      resolve({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve({ 
-          token: 'mock_jwt_token_12345',
-          message: `Welcome back, ${payload.email}! You are now logged in.` 
-        })
-      });
+//       // Simulate successful login (HTTP 200 OK) for any valid input
+//       resolve({
+//         ok: true,
+//         status: 200,
+//         json: () => Promise.resolve({ 
+//           token: 'mock_jwt_token_12345',
+//           message: `Welcome back, ${payload.email}! You are now logged in.` 
+//         })
+//       });
 
-    }, 1500); // 1.5 second delay to simulate network latency
-  });
-};
+//     }, 1500); // 1.5 second delay to simulate network latency
+//   });
+// };
 
 
 // Placeholder Icon for User/Lock
@@ -182,63 +182,95 @@ export default function SignIn() {
     return isValid;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setApiSuccessMessage('');
-    setApiError('');
+  const handleSubmit = async (e) => {  
+  e.preventDefault();
+try {
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5000'}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include', // IMPORTANT: include cookies
+    body: JSON.stringify({ email, password })
+  });
 
-    if (!validateForm()) {
-      return; // Stop if client-side validation fails
+  const data = await response.json();
+
+  if (!response.ok) {
+    setApiError(`❌ ${data.message || 'Login failed'}`);
+    setLoading(false);
+    return;
+  }
+
+  // Login succeeded; server set cookie; data.user contains role
+  setApiSuccessMessage('✅ Login successful — Redirecting...');
+
+  // Redirect based on role
+    if (data.user.role === "admin") {
+      window.location.href = "/dashboard"; 
+    } else if (data.user.role === "employee") {
+      window.location.href = "/dashboard/salesinventorymanagement";
     }
 
-    setLoading(true);
+} catch (err) {
+  setApiError('❌ Network error');
+  setLoading(false);
+}
 
-    try {
-      const payload = {
-        email: email,
-        password: password,
-      };
+    // e.preventDefault();
+    // setApiSuccessMessage('');
+    // setApiError('');
 
-      // Use the mock API function 
-      const response = await mockLoginApi(payload);
+    // if (!validateForm()) {
+    //   return; // Stop if client-side validation fails
+    // }
 
-      const data = await response.json().catch(() => ({ message: response.statusText }));
+    // setLoading(true);
+
+    // try {
+    //   const payload = {
+    //     email: email,
+    //     password: password,
+    //   };
+
+    //   // Use the mock API function 
+    //   const response = await mockLoginApi(payload);
+
+    //   const data = await response.json().catch(() => ({ message: response.statusText }));
       
-      // Status 200 means OK (Success)
-      if (response.ok && response.status === 200) {
-        // --- START OF REDIRECT IMPLEMENTATION ---
-        setApiSuccessMessage(`✅ Login successful! Redirecting to Dashboard...`);
+    //   // Status 200 means OK (Success)
+    //   if (response.ok && response.status === 200) {
+    //     // --- START OF REDIRECT IMPLEMENTATION ---
+    //     setApiSuccessMessage(`✅ Login successful! Redirecting to Dashboard...`);
         
-        // In a real app, you would store the token (data.token) here.
+    //     // In a real app, you would store the token (data.token) here.
         
-        // Clear form fields
-        setPassword(''); 
-        setErrors({}); 
+    //     // Clear form fields
+    //     setPassword(''); 
+    //     setErrors({}); 
 
-        // Redirect to dashboard after a successful login display (1.5s delay)
-        setTimeout(() => {
-            // Note: Since this is a single component file without a router,
-            // we use direct window navigation to simulate the redirect.
-            window.location.href = '/dashboard';
-        }, 1500); 
-        // --- END OF REDIRECT IMPLEMENTATION ---
+    //     // Redirect to dashboard after a successful login display (1.5s delay)
+    //     setTimeout(() => {
+    //         // Note: Since this is a single component file without a router,
+    //         // we use direct window navigation to simulate the redirect.
+    //         window.location.href = '/dashboard';
+    //     }, 1500); 
+    //     // --- END OF REDIRECT IMPLEMENTATION ---
 
-      } else {
-        // Handle simulated server-side errors (e.g., 401 Unauthorized)
-        const msg = data.message || `Server Error: Status ${response.status}.`;
-        setApiError(`❌ Error: ${msg}`);
-      }
-    } catch (error) {
-      console.error("Login Error:", error);
-      // Handle network errors
-      setApiError('❌ Error: Network error or server is unavailable.');
-    } finally {
-      // Only set loading to false in the case of a failed login, 
-      // as successful login initiates a redirect which will unload the component.
-      if (apiError || !apiSuccessMessage) { 
-        setLoading(false);
-      }
-    }
+    //   } else {
+    //     // Handle simulated server-side errors (e.g., 401 Unauthorized)
+    //     const msg = data.message || `Server Error: Status ${response.status}.`;
+    //     setApiError(`❌ Error: ${msg}`);
+    //   }
+    // } catch (error) {
+    //   console.error("Login Error:", error);
+    //   // Handle network errors
+    //   setApiError('❌ Error: Network error or server is unavailable.');
+    // } finally {
+    //   // Only set loading to false in the case of a failed login, 
+    //   // as successful login initiates a redirect which will unload the component.
+    //   if (apiError || !apiSuccessMessage) { 
+    //     setLoading(false);
+    //   }
+    // }
   };
 
   return (

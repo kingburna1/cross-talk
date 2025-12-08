@@ -1,40 +1,28 @@
 // /server/routes/userRoutes.js
 import express from 'express';
-import User from '../models/Users.js';
-
+import User from '../models/user.js';
+import { authenticate, isAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// POST /api/users - Create a new user
-router.post('/register', async (req, res) => { // <-- CHANGED from '/' to '/register'
-  // Note: The hashing happens automatically in the User model's pre-save hook!
-  const newUser = new User(req.body); 
-  
+// Admin creates employee account (POST /api/users/create-employee)
+router.post('/create-employee', authenticate, isAdmin, async (req, res) => {
+  const { name, email, password, role } = req.body; // role optional, defaults to employee
   try {
-    const savedUser = await newUser.save();
-    
-    // Respond with a success message (excluding the password for security)
-    const { password, ...userData } = savedUser._doc; 
-    res.status(201).json({ 
-        message: "User registered successfully!",
-        user: userData 
-    });
-  } catch (error) {
-    if (error.code === 11000) { // MongoDB duplicate key error (e.g., email already exists)
-      return res.status(400).json({ message: "That email address is already in use." });
-    }
-    res.status(500).json({ message: error.message });
+    const user = new User({ name, email, password, role: role || 'employee' });
+    const saved = await user.save();
+    const { password: _, ...payload } = saved._doc;
+    res.status(201).json({ message: 'Employee account created', user: payload });
+  } catch (err) {
+    if (err.code === 11000) return res.status(400).json({ message: 'Email already exists' });
+    res.status(500).json({ message: err.message });
   }
 });
 
-// GET /api/users - Get all users
-router.get('/', async (req, res) => {
-  try {
-    const users = await User.find({});
-    res.status(200).json(users);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+// Admin: list users
+router.get('/', authenticate, isAdmin, async (req, res) => {
+  const users = await User.find().select('-password').sort({ createdAt: -1 });
+  res.json(users);
 });
 
 export default router;

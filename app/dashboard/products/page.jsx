@@ -34,7 +34,7 @@ const initialSampleData = [
         supplierContact: "(555) 987-6543",
         supplierEmail: "sales@budgetelec.co",
         sellPrice: 35.99,
-        qtyLeft: 98,
+        qtyLeft: 98, 
     },
 ];
 

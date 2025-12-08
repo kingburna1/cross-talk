@@ -22,6 +22,27 @@ import {
 } from "react-icons/fa";
 
 export default function Sidebar() {
+
+  const handleSignOut = async () => {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5000'}/api/auth/logout`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      console.log(data.message); // Optional: success message
+      window.location.href = '/'; // Redirect to home page
+    } else {
+      console.error('Logout failed:', data.message);
+    }
+  } catch (err) {
+    console.error('Network error on logout', err);
+  }
+};
+
   const [collapsed, setCollapsed] = useState(true); // start collapsed (icons only)
 
   const menuItems = [
@@ -39,7 +60,7 @@ export default function Sidebar() {
     { icon: <FaShoppingCart />, label: "Orders",  href: "/dashboard/orders" },
      { icon: <FaUsers />, label: "Employees", href: "/dashboard/employees" },
     { icon: <FaCog />, label: "Settings", href: "/dashboard/settings" },
-    { icon: <FaSignOutAlt />, label: "Logout", href: "/dashboard/home" },
+    { icon: <FaSignOutAlt />, label: "Logout", onClick: handleSignOut },
     
   ];
 
@@ -61,22 +82,33 @@ export default function Sidebar() {
       </div>
 
       {/* Menu Items */}
-      <nav className="flex-1 mt-4 h-screen overflow-y-auto flex flex-col scrollbar-hide ">
-        {menuItems.map((item, index) => (
-          <Link
-            href={item.href} 
-            key={index}
-            className="flex items-center gap-3 px-3 py-3 hover:bg-gray-100 cursor-pointer transition"
-          >
-            <span className="text-xl">{item.icon}</span>
-            {!collapsed && (
-              <span className="text-sm font-medium whitespace-nowrap">
-                {item.label}
-              </span>
-            )}
-          </Link>
-        ))}
-      </nav>
+     <nav className="flex-1 mt-4 h-screen overflow-y-auto flex flex-col scrollbar-hide">
+  {menuItems.map((item, index) => (
+    item.onClick ? (
+      <button
+        key={index}
+        onClick={item.onClick}
+        className="flex items-center gap-3 px-3 py-3 hover:bg-gray-100 cursor-pointer transition w-full text-left"
+      >
+        <span className="text-xl">{item.icon}</span>
+        {!collapsed && (
+          <span className="text-sm font-medium whitespace-nowrap">{item.label}</span>
+        )}
+      </button>
+    ) : (
+      <Link
+        key={index}
+        href={item.href}
+        className="flex items-center gap-3 px-3 py-3 hover:bg-gray-100 cursor-pointer transition"
+      >
+        <span className="text-xl">{item.icon}</span>
+        {!collapsed && (
+          <span className="text-sm font-medium whitespace-nowrap">{item.label}</span>
+        )}
+      </Link>
+    )
+  ))}
+</nav>
 
       {/* Footer Button */}
       <div className="p-4">
