@@ -1,8 +1,9 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import Image from 'next/image'; // Assuming Next.js environment
+import Image from 'next/image';
 import { StarIcon, ArrowTrendingUpIcon, ArchiveBoxXMarkIcon } from '@heroicons/react/24/outline';
+import { toast } from 'react-toastify';
 
 const cardVariants = {
   hidden: { opacity: 0, scale: 0.95 },
@@ -25,15 +26,15 @@ const useTruncatedText = (text, limit = 150) => {
 
 const ProductStockCard = ({ product }) => {
   const {
-    id,
+    _id,
     imageSrc,
     name,
     qtyLeft,
-    costPrice,     // Cost to acquire
+    buyPrice,     // Cost to acquire
     sellPrice,    // Price sold for
-    totalSold,    // Total units sold
-    customerReview,
-    reviewRating,
+    totalSold = 0,    // Total units sold
+    customerReview = '',
+    reviewRating = 0,
   } = product;
 
   // Constants
@@ -42,8 +43,8 @@ const ProductStockCard = ({ product }) => {
 
   // Calculations
   // Estimated Profit/Loss based on current stock (Inventory Value)
-  const unitProfit = sellPrice - costPrice;
-  const currentInventoryValue = qtyLeft * costPrice; 
+  const unitProfit = sellPrice - buyPrice;
+  const currentInventoryValue = qtyLeft * buyPrice; 
   const potentialProfitOnStock = qtyLeft * unitProfit;
   
   // Simulated Total Realized Profit (using totalSold)
@@ -55,9 +56,17 @@ const ProductStockCard = ({ product }) => {
   // Handle Review Text Truncation
   const reviewContent = useTruncatedText(customerReview, 150);
 
+  // Format currency in XAF
+  const formatCurrency = (amount) => {
+    return amount.toLocaleString('fr-CM', { 
+      minimumFractionDigits: 0, 
+      maximumFractionDigits: 0 
+    }) + ' FCFA';
+  };
+
   return (
     <motion.div
-      key={id}
+      key={_id}
       variants={cardVariants}
       initial="hidden"
       animate="visible"
@@ -98,28 +107,28 @@ const ProductStockCard = ({ product }) => {
           
           <MetricBlock 
             title="Unit Profit" 
-            value={`$${unitProfit.toFixed(2)}`} 
+            value={formatCurrency(unitProfit)} 
             color={unitProfit >= 0 ? 'text-green-600' : 'text-red-600'}
             icon={ArrowTrendingUpIcon}
           />
 
           <MetricBlock 
             title="Total Realized Profit" 
-            value={`$${totalRealizedProfit.toFixed(2)}`} 
+            value={formatCurrency(totalRealizedProfit)} 
             color='text-green-600'
             icon={ArrowTrendingUpIcon}
           />
           
           <MetricBlock 
             title="Potential Profit on Stock" 
-            value={`$${potentialProfitOnStock.toFixed(2)}`} 
+            value={formatCurrency(potentialProfitOnStock)} 
             color='text-blue-600'
             icon={ArrowTrendingUpIcon}
           />
 
           <MetricBlock 
             title="Potential Loss/Risk" 
-            value={`$${potentialLoss.toFixed(2)}`} 
+            value={formatCurrency(potentialLoss)} 
             color='text-red-600'
             icon={ArchiveBoxXMarkIcon}
           />
@@ -129,20 +138,20 @@ const ProductStockCard = ({ product }) => {
         <div className="review-section lg:w-1/2 lg:pl-6">
           <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center">
             <StarIcon className="w-5 h-5 text-yellow-500 mr-2" />
-            Customer Review ({reviewRating.toFixed(1)} / 5)
+            Customer Review {reviewRating > 0 ? `(${reviewRating.toFixed(1)} / 5)` : '(No rating yet)'}
           </h4>
           
           <div className="flex items-center mb-2">
             {[...Array(5)].map((_, i) => (
               <StarIcon
                 key={i}
-                className={`w-4 h-4 ${i < reviewRating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}
+                className={`w-4 h-4 ${i < Math.floor(reviewRating) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}
               />
             ))}
           </div>
 
           <p className="text-sm text-gray-600 leading-snug">
-            {reviewContent.displayText}
+            {customerReview || 'No customer review yet.'}
           </p>
           
           {reviewContent.showToggle && (
@@ -172,51 +181,60 @@ const MetricBlock = ({ title, value, color, icon: Icon }) => (
     </div>
 );
 
-// --- Example Usage Data ---
-const exampleProductData = [
-    {
-        id: 1,
-        imageSrc: '/image1.jpg', // Replace with a real path
-        name: 'Luxury Smartwatch Pro X900 (Black Edition)',
-        qtyLeft: 5,
-        costPrice: 100.00,
-        sellPrice: 150.00,
-        totalSold: 45,
-        customerReview: 'This watch is excellent! Great battery life, sharp display, and very durable. I only wish the strap options were wider. The seller shipped very quickly. Highly recommend for the price point!',
-        reviewRating: 4.5,
-    },
-    {
-        id: 2,
-        imageSrc: '/image1.jpg', // Replace with a real path
-        name: 'Wireless Ergonomic Mouse (Silent Click)',
-        qtyLeft: 589,
-        costPrice: 8.00,
-        sellPrice: 15.50,
-        totalSold: 2000,
-        customerReview: 'Basic mouse, works fine. Nothing special to report.',
-        reviewRating: 3.2,
-    },
-    {
-        id: 3,
-        imageSrc: '/image1.jpg', // Replace with a real path
-        name: 'Advanced Gaming Keyboard (Mechanical RGB)',
-        qtyLeft: 8, // Low Stock Example
-        costPrice: 75.00,
-        sellPrice: 60.00,
-        totalSold: 10,
-        customerReview: 'The keyboard is responsive, but the RGB lighting failed after two weeks. Had to return. Seller was responsive but the product quality is questionable given the high price.',
-        reviewRating: 1.5,
-    },
-];
-
 // Component to export for use in Next.js page
-const StockPage = () => (
-    <div className="p-6 md:p-10 space-y-4">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">Inventory Stock Performance</h1>
-        {exampleProductData.map(product => (
-            <ProductStockCard key={product.id} product={product} />
-        ))}
-    </div>
-);
+const StockPage = () => {
+    const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                const response = await fetch('/api/products', {
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch products');
+                }
+
+                const data = await response.json();
+                setProducts(data);
+            } catch (error) {
+                console.error('Error fetching products:', error);
+                toast.error('Failed to load products');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchProducts();
+    }, []);
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+                    <p className="mt-4 text-gray-600">Loading inventory...</p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="p-6 md:p-10 space-y-4">
+            <h1 className="text-3xl font-bold text-gray-800 mb-6">Inventory Stock Performance</h1>
+            {products.length === 0 ? (
+                <div className="text-center py-10">
+                    <p className="text-gray-600">No products found in inventory.</p>
+                </div>
+            ) : (
+                products.map(product => (
+                    <ProductStockCard key={product._id} product={product} />
+                ))
+            )}
+        </div>
+    );
+};
 
 export default StockPage;

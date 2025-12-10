@@ -25,4 +25,37 @@ router.get('/', authenticate, isAdmin, async (req, res) => {
   res.json(users);
 });
 
+// Get current user profile
+router.get('/me', authenticate, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Update current user profile
+router.put('/me', authenticate, async (req, res) => {
+  try {
+    const { name, phone, address, timezone, imageSrc } = req.body;
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Update allowed fields
+    if (name) user.name = name;
+    if (phone !== undefined) user.phone = phone;
+    if (address !== undefined) user.address = address;
+    if (timezone) user.timezone = timezone;
+    if (imageSrc !== undefined) user.imageSrc = imageSrc;
+
+    await user.save();
+    const updated = await User.findById(req.user.id).select('-password');
+    res.json({ message: 'Profile updated successfully', user: updated });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 export default router;

@@ -18,8 +18,8 @@ const SalesLineChart = () => (
             >
                 <CartesianGrid strokeDasharray="3 3" stroke="#ccc" />
                 <XAxis dataKey="name" />
-                <YAxis unit="$" />
-                <Tooltip formatter={(value) => [`$${value.toLocaleString()}`]} />
+                <YAxis unit=" FCFA" />
+                <Tooltip formatter={(value) => [`${value.toLocaleString()} FCFA`]} />
                 <Legend />
                 <Line type="monotone" dataKey="Revenue" stroke="#8884d8" strokeWidth={2} />
                 <Line type="monotone" dataKey="Expenses" stroke="#82ca9d" strokeWidth={2} />

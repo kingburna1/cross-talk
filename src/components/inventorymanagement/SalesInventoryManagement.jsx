@@ -1,6 +1,7 @@
 'use client'
 import React, { useState, useMemo, useCallback } from "react";
 import { TagIcon, PlusIcon } from "@heroicons/react/24/outline";
+import { showSuccessToast, showErrorToast } from "../../lib/toast";
 
 // Import Hooks and Utils
 import { usePOSData } from "../../hooks/usePOSData";
@@ -44,7 +45,10 @@ const SalesInventoryManagement = () => {
     }, []);
 
     const handleSaveSale = async () => {
-        if (!isSaleValid) return alert("Invalid Sale");
+        if (!isSaleValid) {
+            showErrorToast("Invalid Sale: Please add items and ensure payment covers the total");
+            return;
+        }
         setIsProcessing(true);
         
         const saleData = {
@@ -56,10 +60,10 @@ const SalesInventoryManagement = () => {
         setIsProcessing(false);
         
         if (success) {
-            alert(`Sale of ${formatCurrency(totals.grandTotal)} saved!`);
+            showSuccessToast(`Sale of ${formatCurrency(totals.grandTotal)} saved!`);
             startNewSale();
         } else {
-            alert("Failed to save.");
+            showErrorToast("Failed to save sale");
         }
     };
 

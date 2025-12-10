@@ -3,7 +3,7 @@ import Employee from "../models/employees.js";
 import Supplier from "../models/suppliers.js";
 import Message from "../models/messages.js";
 import Notification from "../models/notifications.js";
-import User from '../models/users.js';
+import User from '../models/user.js';
 
 import EmployeeProfile from '../models/EmployeeProfile.js';
 
@@ -11,43 +11,34 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 dotenv.config();
 
-export const seedAdmin = async () => {
-  const adminExists = await User.findOne({ role: 'admin' });
-
-  if (!adminExists) {
-    await User.create({
-      name: "Main Admin",
-      email: "admin@system.com",
-      password: "Admin123!",  // hashing still applies
-      role: "admin"
-    });
-
-    console.log("Default admin created");
-  }
-};
-
 const initialProducts = [
     {
         imageSrc: "/image1.jpg",
         name: "Luxury Smartwatch Pro X900",
-        buyPrice: 150.0,
+        buyPrice: 50000,
         qtyBought: 50,
         supplierName: "TechCorp Global Inc.",
         supplierContact: "(555) 123-4567",
         supplierEmail: "contact@techcorp.com",
-        sellPrice: 299.99,
+        sellPrice: 85000,
         qtyLeft: 12,
+        totalSold: 38,
+        customerReview: "This watch is excellent! Great battery life, sharp display, and very durable. The features are amazing for the price. Highly recommend!",
+        reviewRating: 4.5,
     },
     {
         imageSrc: "/image2.jpg",
         name: "Wireless Ergonomic Mouse",
-        buyPrice: 15.5,
+        buyPrice: 3000,
         qtyBought: 200,
         supplierName: "Budget Electronics Ltd",
         supplierContact: "(555) 987-6543",
         supplierEmail: "sales@budgetelec.co",
-        sellPrice: 35.99,
+        sellPrice: 6500,
         qtyLeft: 98,
+        totalSold: 102,
+        customerReview: "Good mouse for everyday use. Comfortable grip and works smoothly. Good value for money.",
+        reviewRating: 4.0,
     },
 ];
 
@@ -157,16 +148,54 @@ const dummyEmployees = [
 const initialSuppliers = [
     {
         name: "TechCorp Global Inc.",
-        email: "contact@techcorp.com",
-        contact: "(555) 123-4567",
-        imageSrc: "/image1.jpg",
+        address: "123 Tech Street, Silicon Valley, CA 94025",
+        productName: "Electronics & Smart Devices",
+        maxDeliveryTime: "3-5 Business Days",
+        pricePerUnit: 150.00,
+        supplierEmail: "contact@techcorp.com",
+        firstContact: "(555) 123-4567",
+        secondContact: "(555) 123-4568",
     },
     {
         name: "Budget Electronics Ltd",
-        email: "sales@budgetelec.co",
-        contact: "(555) 987-6543",
-        imageSrc: "/image2.jpg",
-    }
+        address: "456 Commerce Ave, New York, NY 10001",
+        productName: "Computer Accessories",
+        maxDeliveryTime: "2-4 Business Days",
+        pricePerUnit: 15.50,
+        supplierEmail: "sales@budgetelec.co",
+        firstContact: "(555) 987-6543",
+        secondContact: "(555) 987-6544",
+    },
+    {
+        name: "Global Foods Distributors",
+        address: "789 Market Boulevard, Chicago, IL 60601",
+        productName: "Packaged Foods & Beverages",
+        maxDeliveryTime: "1-2 Business Days",
+        pricePerUnit: 5.75,
+        supplierEmail: "orders@globalfoods.com",
+        firstContact: "(555) 456-7890",
+        secondContact: "(555) 456-7891",
+    },
+    {
+        name: "Fresh Produce Partners",
+        address: "321 Farm Road, Portland, OR 97201",
+        productName: "Fresh Fruits & Vegetables",
+        maxDeliveryTime: "24-48 Hours",
+        pricePerUnit: 2.50,
+        supplierEmail: "supply@freshproduce.com",
+        firstContact: "(555) 234-5678",
+        secondContact: "",
+    },
+    {
+        name: "Premium Beverages Co.",
+        address: "567 Industrial Park, Miami, FL 33101",
+        productName: "Soft Drinks & Juices",
+        maxDeliveryTime: "2-3 Business Days",
+        pricePerUnit: 1.25,
+        supplierEmail: "sales@premiumbev.com",
+        firstContact: "(555) 345-6789",
+        secondContact: "(555) 345-6780",
+    },
 ];
 
 

@@ -19,23 +19,53 @@ const EditSupplierForm = ({ supplier, onUpdate, onClose }) => {
         setFormData(prev => ({ ...prev, [id]: value }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSaving(true);
         
-        // Prepare updated object, ensuring numbers are parsed correctly
-        const updatedSupplier = {
-            ...formData,
-            pricePerUnit: parseFloat(formData.pricePerUnit),
-        };
+        try {
+            // Prepare updated object, ensuring numbers are parsed correctly
+            const updatedSupplier = {
+                name: formData.name,
+                address: formData.address,
+                productName: formData.productName,
+                maxDeliveryTime: formData.maxDeliveryTime,
+                pricePerUnit: parseFloat(formData.pricePerUnit),
+                supplierEmail: formData.supplierEmail,
+                firstContact: formData.firstContact,
+                secondContact: formData.secondContact,
+            };
 
-        // Call the parent update function
-        onUpdate(updatedSupplier);
+            // Send update to backend API
+            const response = await fetch(
+                `${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000"}/api/suppliers/${supplier._id || supplier.id}`,
+                {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    credentials: "include",
+                    body: JSON.stringify(updatedSupplier),
+                }
+            );
 
-        // Reset and Close
-        setTimeout(() => {
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Failed to update supplier");
+            }
+
+            const savedSupplier = await response.json();
+
+            // Call the parent update function with the response from server
+            onUpdate(savedSupplier);
+
+            onClose();
+        } catch (error) {
+            console.error("Error updating supplier:", error);
+            showErrorToast(`Failed to update supplier: ${error.message}`);
+        } finally {
             setIsSaving(false);
-        }, 500);
+        }
     };
 
     return (

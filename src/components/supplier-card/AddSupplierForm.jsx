@@ -1,6 +1,7 @@
 // src/components/AddSupplierForm.jsx
 'use client';
 import React, { useState } from 'react';
+import { showErrorToast } from '../../lib/toast';
 import { 
     XMarkIcon, PlusIcon, CurrencyDollarIcon, TagIcon, PhoneIcon, MapPinIcon, ClockIcon, EnvelopeIcon, BuildingStorefrontIcon
 } from '@heroicons/react/24/outline';
@@ -25,30 +26,58 @@ const AddSupplierForm = ({ onSupplierAdded, onClose }) => {
         setFormData(prev => ({ ...prev, [id]: value }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSaving(true);
         
-        // 1. Prepare new supplier object
-        const newSupplier = {
-            ...formData,
-            pricePerUnit: parseFloat(formData.pricePerUnit),
-        };
+        try {
+            // 1. Prepare new supplier object
+            const newSupplier = {
+                name: formData.name,
+                address: formData.address,
+                productName: formData.productName,
+                maxDeliveryTime: formData.maxDeliveryTime,
+                pricePerUnit: parseFloat(formData.pricePerUnit),
+                supplierEmail: formData.supplierEmail,
+                firstContact: formData.firstContact,
+                secondContact: formData.secondContact,
+            };
 
-        // 2. Add to Local Storage
-        const existingSuppliers = JSON.parse(localStorage.getItem('tempSuppliers')) || [];
-        existingSuppliers.unshift(newSupplier); // Add to the beginning
-        localStorage.setItem('tempSuppliers', JSON.stringify(existingSuppliers));
+            // 2. Send to backend API
+            const response = await fetch(
+                `${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000"}/api/suppliers`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    credentials: "include",
+                    body: JSON.stringify(newSupplier),
+                }
+            );
 
-        // 3. Notify parent component (SupplierPage.jsx)
-        onSupplierAdded(newSupplier);
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Failed to add supplier");
+            }
 
-        // 4. Reset and Close
-        setTimeout(() => {
-            setIsSaving(false);
+            const savedSupplier = await response.json();
+
+            // Trigger notification refresh event
+            window.dispatchEvent(new CustomEvent('newNotificationCreated'));
+
+            // 3. Notify parent component with the saved supplier (includes _id from MongoDB)
+            onSupplierAdded(savedSupplier);
+
+            // 4. Reset and Close
             setFormData(initialFormData);
             onClose();
-        }, 500);
+        } catch (error) {
+            console.error("Error adding supplier:", error);
+            showErrorToast(`Failed to add supplier: ${error.message}`);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (

@@ -9,82 +9,75 @@ import { useSearchStore } from '../../../src/store/searchStore';
 
 
 
-// ... (initialSampleData remains the same) ...
-const initialSampleData = [
-    {
-        name: 'TechCorp Global Inc.',
-        address: '123 Tech Way, Shenzhen, China',
-        productName: 'Luxury Smartwatch Pro X900',
-        maxDeliveryTime: '14 days',
-        pricePerUnit: 150.00,
-        supplierEmail: 'techsales@corp.com',
-        firstContact: '555-100-2000',
-        secondContact: '555-100-2001',
-    },
-    {
-        name: 'Office Essentials Ltd.',
-        address: '45 Main Street, Toronto, Canada',
-        productName: 'Wireless Ergonomic Mouse',
-        maxDeliveryTime: '5 days',
-        pricePerUnit: 15.50,
-        supplierEmail: 'office@essential.com',
-        firstContact: '555-300-4000',
-        secondContact: '',
-    },
-];
-
 const SupplierPage = () => {
     // --- STATES ---
-    const [suppliers, setSuppliers] = useState(initialSampleData);
+    const [suppliers, setSuppliers] = useState([]);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingSupplier, setEditingSupplier] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    // 3. GET GLOBAL SEARCH STATE (Must be at the top level with other hooks)
+    // GET GLOBAL SEARCH STATE
     const { search } = useSearchStore();
 
-    // --- EFFECT 1: Load products from localStorage on initial load ---
+    // --- EFFECT: Load suppliers from backend MongoDB ---
     useEffect(() => {
-        try {
-            const tempSuppliers = JSON.parse(localStorage.getItem('tempSuppliers'));
-            if (tempSuppliers && tempSuppliers.length > 0) {
-                // Ensure unique IDs for temporary storage items for reliable editing
-                const suppliersWithIds = tempSuppliers.map((supplier, index) => ({ 
-                    ...supplier, 
-                    // Create a pseudo-unique ID for local storage items
-                    id: `temp-${index}-${supplier.name.replace(/\s/g, '')}` 
+        const loadFromServer = async () => {
+            try {
+                const res = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000"}/api/suppliers`,
+                    { credentials: "include" }
+                );
+
+                console.log("Fetch /api/suppliers status:", res.status);
+
+                if (!res.ok) {
+                    console.error("Failed to fetch suppliers:", await res.text());
+                    setIsLoading(false);
+                    return;
+                }
+
+                const dbSuppliers = await res.json();
+                console.log("Fetched suppliers:", dbSuppliers);
+
+                // Map suppliers to include id field from _id
+                const mapped = dbSuppliers.map(s => ({
+                    ...s,
+                    id: s._id,
                 }));
-                setSuppliers([...suppliersWithIds, ...initialSampleData.map((s, i) => ({ ...s, id: `static-${i}` }))]);
-            } else {
-                setSuppliers(initialSampleData.map((s, i) => ({ ...s, id: `static-${i}` })));
+
+                setSuppliers(mapped);
+            } catch (err) {
+                console.error("Network error loading suppliers:", err);
+            } finally {
+                setIsLoading(false);
             }
-        } catch (error) {
-            console.error("Could not load suppliers from local storage:", error);
-        }
-        setIsLoading(false);
+        };
+
+        loadFromServer();
     }, []);
 
-    // Function to handle adding a new supplier (remains the same)
+    // Function to handle adding a new supplier
     const handleSupplierAdded = (newSupplier) => {
-        // Add a temporary ID for the new item
-        const supplierWithId = { 
-            ...newSupplier, 
-            id: `temp-${Date.now()}-${newSupplier.name.replace(/\s/g, '')}` 
+        const supplierWithId = {
+            ...newSupplier,
+            id: newSupplier._id,
         };
         setSuppliers(prevSuppliers => [supplierWithId, ...prevSuppliers]);
     };
 
-    // NEW: Function to handle updating an existing supplier
+    // Function to handle updating an existing supplier
     const handleSupplierUpdated = (updatedSupplier) => {
-        const newSuppliers = suppliers.map(s => 
-            s.id === updatedSupplier.id ? updatedSupplier : s
+        // Map the updated supplier with proper id field
+        const supplierWithId = {
+            ...updatedSupplier,
+            id: updatedSupplier._id || updatedSupplier.id,
+        };
+        
+        const newSuppliers = suppliers.map(s =>
+            s.id === supplierWithId.id ? supplierWithId : s
         );
         setSuppliers(newSuppliers);
-        setEditingSupplier(null); // Close the form
-
-        // Update Local Storage: Only update 'tempSuppliers'
-        const tempSuppliers = newSuppliers.filter(s => s.id.startsWith('temp-'));
-        localStorage.setItem('tempSuppliers', JSON.stringify(tempSuppliers));
+        setEditingSupplier(null);
     };
 
     // NEW: Function passed to SupplierCard to start editing
@@ -148,10 +141,10 @@ const SupplierPage = () => {
                         </p>
                     </div>
                 ) : (
-                    // 5. MAP OVER FILTERED SUPPLIERS
-                    filteredSuppliers.map((supplier, index) => (
+                    // Map over filtered suppliers with unique keys
+                    filteredSuppliers.map((supplier) => (
                         <SupplierCard 
-                            key={supplier.id || index} 
+                            key={supplier.id} 
                             supplier={supplier} 
                             onEdit={() => startEditing(supplier)} 
                         />

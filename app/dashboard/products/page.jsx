@@ -10,104 +10,85 @@ import { useSearchStore } from "../../../src/store/searchStore";
 
 
 
-// NOTE: Initial dummy data now ensures images are valid URLs
-const initialSampleData = [
-    {
-        id: "static-1", // Add unique ID for stable editing
-        imageSrc: "/image1.jpg",
-        name: "Luxury Smartwatch Pro X900",
-        buyPrice: 150.0,
-        qtyBought: 50,
-        supplierName: "TechCorp Global Inc.",
-        supplierContact: "(555) 123-4567",
-        supplierEmail: "contact@techcorp.com",
-        sellPrice: 299.99,
-        qtyLeft: 12,
-    },
-    {
-        id: "static-2", // Add unique ID
-        imageSrc: "/image2.jpg",
-        name: "Wireless Ergonomic Mouse",
-        buyPrice: 15.5,
-        qtyBought: 200,
-        supplierName: "Budget Electronics Ltd",
-        supplierContact: "(555) 987-6543",
-        supplierEmail: "sales@budgetelec.co",
-        sellPrice: 35.99,
-        qtyLeft: 98, 
-    },
-];
+
 
 const ProductPage = () => {
     // --- STATES ---
     const [editingProduct, setEditingProduct] = useState(null);
-    const [products, setProducts] = useState(initialSampleData);
+    const [products, setProducts] = useState([]);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
-    // 2. CALL ZUSTAND HOOK (must be at the top level with other hooks)
+    //  CALL ZUSTAND HOOK 
     const { search } = useSearchStore(); 
 
-    // --- EFFECT 1: Load products from localStorage on initial load ---
+    // --- EFFECT: Load products from backend MongoDB ---
     useEffect(() => {
-        try {
-            const tempProducts =
-                JSON.parse(localStorage.getItem("tempProducts")) || [];
+        const loadFromServer = async () => {
+            try {
+                const res = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000"}/api/products`,
+                    { credentials: "include" }
+                );
 
-            // Assign temporary IDs to local storage items for editing
-            const productsWithIds = tempProducts.map((product, index) => ({
-                ...product,
-                id: `temp-${index}-${product.name.replace(/\s/g, "")}`,
-            }));
+                console.log("Fetch /api/products status:", res.status);
 
-            // Assign static IDs to initial data if not present (crucial for keys)
-            const staticProducts = initialSampleData.map((p, i) => ({
-                ...p,
-                id: p.id || `static-${i}`,
-            }));
+                if (!res.ok) {
+                    console.error("Failed to fetch products:", await res.text());
+                    setIsLoading(false);
+                    return;
+                }
 
-            setProducts([...productsWithIds, ...staticProducts]);
-        } catch (error) {
-            console.error("Could not load products from local storage:", error);
-        }
-        setIsLoading(false);
+                const dbProducts = await res.json();
+                console.log("Fetched products:", dbProducts);
+
+                // Map products to include id field from _id
+                const mapped = dbProducts.map(p => ({
+                    ...p,
+                    id: p._id,
+                }));
+
+                setProducts(mapped);
+            } catch (err) {
+                console.error("Network error loading products:", err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        loadFromServer();
     }, []);
 
-    // --- HANDLERS (omitted for brevity, they remain unchanged) ---
+
+
+    // --- HANDLERS ---
     const handleProductAdded = (newProduct) => {
-        // Add a temporary ID for the new item before saving
         const productWithId = {
             ...newProduct,
-            id: `temp-${Date.now()}-${newProduct.name.replace(/\s/g, "")}`,
+            id: newProduct._id,
         };
         setProducts((prevProducts) => [productWithId, ...prevProducts]);
-
-        // Update local storage
-        const currentTempProducts =
-            JSON.parse(localStorage.getItem("tempProducts")) || [];
-        localStorage.setItem(
-            "tempProducts",
-            JSON.stringify([newProduct, ...currentTempProducts])
-        );
     };
+
 
     const startEditing = (product) => {
         setEditingProduct(product);
     };
 
     const handleProductUpdated = (updatedProduct) => {
+        // Map the updated product with proper id field
+        const productWithId = {
+            ...updatedProduct,
+            id: updatedProduct._id || updatedProduct.id,
+        };
+        
         const newProducts = products.map((p) =>
-            p.id === updatedProduct.id ? updatedProduct : p
+            p.id === productWithId.id ? productWithId : p
         );
         setProducts(newProducts);
-        setEditingProduct(null); // Close the edit form
-
-        // Update Local Storage: Only save the items that originated from temp storage
-        const tempProductsToSave = newProducts.filter(
-            (p) => p.id && p.id.startsWith("temp-")
-        );
-        localStorage.setItem("tempProducts", JSON.stringify(tempProductsToSave));
+        setEditingProduct(null);
     };
+
 
     // 3. FILTERING LOGIC using useMemo
     const filteredProducts = useMemo(() => {
@@ -165,13 +146,13 @@ const ProductPage = () => {
                         </p>
                     </div>
                 ) : (
-                    // 4. MAP OVER FILTERED PRODUCTS
-                    filteredProducts.map((product, index) => (
+                    // Map over filtered products with unique keys
+                    filteredProducts.map((product) => (
                         <ProductCard
-                            // Use the unique 'id' for the key, falling back to index
-                            key={product.id || `${product.name}-${index}`}
+                            // Use the unique '_id' from MongoDB for the key
+                            key={product.id}
                             product={product}
-                            // PASS THE EDIT FUNCTION DOWN
+                            // Pass the edit function down
                             onEdit={startEditing}
                         />
                     ))

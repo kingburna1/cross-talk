@@ -28,7 +28,7 @@ const CategoryPieChart = () => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                 </Pie>
-                <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, 'Revenue']} />
+                <Tooltip formatter={(value) => [`${value.toLocaleString()} FCFA`, 'Revenue']} />
                 <Legend layout="vertical" align="right" verticalAlign="middle" wrapperStyle={{ paddingLeft: '10px' }} />
             </PieChart>
         </ResponsiveContainer>

@@ -152,9 +152,9 @@ const LandingPageHero = () => {
          href="/signin"
           className="
             px-8 py-4 text-lg font-semibold text-white uppercase tracking-wider 
-            bg-cyan-600 hover:bg-cyan-500 transition-all duration-300 focus:outline-none focus:ring-4 
+            bg-green-600 hover:bg-green-500 transition-all duration-300 focus:outline-none focus:ring-4 
             rounded-full 
-            shadow-xl shadow-cyan-400/70 
+            shadow-xl shadow-green-400/70 
             transform hover:scale-[1.05] active:scale-95 
             "
             style={{ animation: 'soft-glow 3s infinite ease-in-out' }}

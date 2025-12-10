@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { PlusIcon, CurrencyDollarIcon } from "@heroicons/react/24/outline";
 import { useCallback } from "react"; // Added this hook, which was mentioned in the error stack
+import { showErrorToast } from "../../lib/toast";
 
 import EmployeeCard from "./EmployeeCard";
 import AddEmployeeForm from "./AddEmployeeForm";
@@ -64,7 +65,7 @@ const EmployeesManagement = () => {
     // ------------------------------------------------------------------
 
     // 1-4. useState
-    const [employees, setEmployees] = useState(dummyEmployees);
+    const [employees, setEmployees] = useState([]);
     const [isAddFormOpen, setIsAddFormOpen] = useState(false);
     const [editingEmployee, setEditingEmployee] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -72,33 +73,42 @@ const EmployeesManagement = () => {
     // Get search state (This was the hook that was previously conditional)
     const { search } = useSearchStore();
 
-    // 5. useEffect
-    // --- EFFECT: Load employees from localStorage on initial load ---
+    // 5. useEffect - Load employees from backend MongoDB
     useEffect(() => {
-        try {
-            const tempEmployees =
-                JSON.parse(localStorage.getItem("tempEmployees")) || [];
+        const loadFromServer = async () => {
+            try {
+                const res = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000"}/api/employees`,
+                    { credentials: "include" }
+                );
 
-            // Filter out any static dummy employees that might have been saved locally
-            const initialStaticEmployees = dummyEmployees.filter(
-                (e) => !tempEmployees.some((tempE) => tempE.id === e.id)
-            );
+                console.log("Fetch /api/employees status:", res.status);
 
-            setEmployees([...tempEmployees, ...initialStaticEmployees]);
-        } catch (error) {
-            console.error("Could not load employees from local storage:", error);
-        }
+                if (!res.ok) {
+                    console.error("Failed to fetch employees:", await res.text());
+                    setIsLoading(false);
+                    return;
+                }
 
-        setIsLoading(false);
+                const dbEmployees = await res.json();
+                console.log("Fetched employees:", dbEmployees);
+
+                // Map employees to include id field from _id
+                const mapped = dbEmployees.map(e => ({
+                    ...e,
+                    id: e._id,
+                }));
+
+                setEmployees(mapped);
+            } catch (err) {
+                console.error("Network error loading employees:", err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        loadFromServer();
     }, []);
-
-    // Helper to update localStorage with non-static employees
-    // 7. useCallback (Adding this back to clear the 'undefined' error,
-    // though the logic uses it as a simple function for now)
-    const updateLocalStorage = useCallback((currentEmployees) => {
-        const tempEmployeesToSave = currentEmployees.filter((e) => e.id > 100); // Filter out static dummy employees (id 1, 2, 3)
-        localStorage.setItem("tempEmployees", JSON.stringify(tempEmployeesToSave));
-    }, []); // Empty dependency array means this function reference is stable
 
     // --- SEARCH FILTERING LOGIC (useMemo must be here) ---
     // 6. useMemo
@@ -120,37 +130,57 @@ const EmployeesManagement = () => {
 
     // 1. ADD EMPLOYEE
     const handleEmployeeAdded = useCallback((newEmployee) => {
-        setEmployees((prevEmployees) => {
-            const updatedEmployees = [newEmployee, ...prevEmployees];
-            updateLocalStorage(updatedEmployees);
-            return updatedEmployees;
-        });
+        const employeeWithId = {
+            ...newEmployee,
+            id: newEmployee._id,
+        };
+        setEmployees((prevEmployees) => [employeeWithId, ...prevEmployees]);
         setIsAddFormOpen(false);
-    }, [updateLocalStorage]);
+    }, []);
 
     // 2. START EDITING
     const startEditing = useCallback((employee) => {
         setEditingEmployee(employee);
     }, []);
 
+    // Handle delete
+    const handleDelete = async (id) => {
+        console.log("Deleting employee with id:", id);
+        try {
+            const response = await fetch(
+                `${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000"}/api/employees/${id}`,
+                {
+                    method: "DELETE",
+                    credentials: "include",
+                }
+            );
 
-     // Handle delete
-  const handleDelete = (id) => {
-    console.log("Deleting employee with id:", id);
-    setEmployees((prev) => prev.filter((emp) => emp.id !== id));
-  };
+            if (!response.ok) {
+                throw new Error("Failed to delete employee");
+            }
+
+            setEmployees((prev) => prev.filter((emp) => emp.id !== id));
+        } catch (error) {
+            console.error("Error deleting employee:", error);
+            showErrorToast(`Failed to delete employee: ${error.message}`);
+        }
+    };
 
     // 3. UPDATE EMPLOYEE
     const handleEmployeeUpdated = useCallback((updatedEmployee) => {
+        const employeeWithId = {
+            ...updatedEmployee,
+            id: updatedEmployee._id || updatedEmployee.id,
+        };
+        
         setEmployees((prevEmployees) => {
             const newEmployees = prevEmployees.map((e) =>
-                e.id === updatedEmployee.id ? updatedEmployee : e
+                e.id === employeeWithId.id ? employeeWithId : e
             );
-            updateLocalStorage(newEmployees);
             return newEmployees;
         });
         setEditingEmployee(null); // Close the edit form
-    }, [updateLocalStorage]);
+    }, []);
 
     // --- CALCULATION LOGIC (useMemo) ---
     const { totalAnnualPayroll, totalMonthlyPayroll } = useMemo(() => {

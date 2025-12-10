@@ -19,8 +19,8 @@ const ProfitExpenseBarChart = () => (
             >
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="name" stroke="#6b7280" />
-                <YAxis unit="$" stroke="#6b7280" />
-                <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, 'Value']} />
+                <YAxis unit=" FCFA" stroke="#6b7280" />
+                <Tooltip formatter={(value) => [`${value.toLocaleString()} FCFA`, 'Value']} />
                 <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px' }} />
                 <Bar dataKey="Gross Profit" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="Expenses" fill="#ef4444" radius={[4, 4, 0, 0]} />

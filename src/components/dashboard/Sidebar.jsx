@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { MdTrendingUp } from "react-icons/md";
 import { HiClipboardList } from "react-icons/hi";
 import Link from "next/link";
+import { GiJerusalemCross } from "react-icons/gi";
 import {
   FaHome,
   FaUser,
@@ -48,6 +49,7 @@ export default function Sidebar() {
   const menuItems = [
     { icon: <FaHome />, label: "Home", href: "/dashboard/" },
     { icon: <HiClipboardList />, label: "Inventory Management", href: "/dashboard/salesinventorymanagement" },
+    { icon: <GiJerusalemCross />, label: "Sales", href: "/dashboard/sales" },
     { icon: <FaUser />, label: "Profile",href: "/dashboard/profile" },
     { icon: <FaBell />, label: "Notifications", href: "/dashboard/notifications" },
     { icon: <FaEnvelope />, label: "Messages",href: "/dashboard/messages" },

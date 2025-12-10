@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   XMarkIcon,
   UserIcon,
@@ -10,7 +10,9 @@ import {
   BriefcaseIcon,
   CurrencyDollarIcon,
   CreditCardIcon,
+  CloudArrowUpIcon,
 } from "@heroicons/react/24/outline";
+import { showErrorToast } from "../../lib/toast";
 
 const initialFormState = {
   name: "",
@@ -21,7 +23,8 @@ const initialFormState = {
   post: "",
   salary: "",
   paymentMeans: "Bank Transfer (Monthly)",
-  image: "/image2.jpg", // Placeholder image
+  image: "",
+  imageFile: null,
 };
 
 // ✅ FIX: InputGroup is now defined OUTSIDE the main component.
@@ -65,29 +68,122 @@ const InputGroup = ({
 const AddEmployeeForm = ({ onClose, onEmployeeAdded }) => {
   const [formData, setFormData] = useState(initialFormState);
   const [isSaving, setIsSaving] = useState(false);
+  const fileInputRef = useRef(null);
 
   const handleChange = (e) => {
     const { id, value } = e.target;
     setFormData((prev) => ({ ...prev, [id]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setFormData(prev => ({
+        ...prev,
+        imageFile: file,
+        image: url,
+      }));
+    }
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSaving(true);
 
-    const newEmployee = {
-      ...formData,
-      id: Date.now(),
-      age: parseInt(formData.age, 10),
-      salary: parseFloat(formData.salary),
-    };
+    try {
+      let imageUrl = '/image2.jpg'; // Default placeholder image
+      
+      // 1. Upload image to Cloudinary if a file was selected
+      if (formData.imageFile) {
+        try {
+          console.log("📸 Attempting to upload image:", {
+            name: formData.imageFile.name,
+            type: formData.imageFile.type,
+            size: formData.imageFile.size
+          });
 
-    onEmployeeAdded(newEmployee);
+          const formDataToUpload = new FormData();
+          formDataToUpload.append('file', formData.imageFile);
+          
+          console.log("🚀 Sending upload request to:", `${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000"}/api/upload`);
+          
+          const uploadResponse = await fetch(
+            `${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000"}/api/upload`,
+            {
+              method: "POST",
+              credentials: "include",
+              body: formDataToUpload,
+            }
+          );
+          
+          console.log("📡 Upload response status:", uploadResponse.status, uploadResponse.statusText);
+          
+          if (!uploadResponse.ok) {
+            let errorMessage = "Failed to upload image";
+            try {
+              const errorData = await uploadResponse.json();
+              console.error("❌ Upload failed with error:", errorData);
+              errorMessage = errorData.message || errorData.error || errorMessage;
+            } catch (e) {
+              // Response is not JSON, get text instead
+              const errorText = await uploadResponse.text();
+              console.error("❌ Upload failed with text response:", errorText);
+              errorMessage = errorText || `HTTP ${uploadResponse.status}: ${uploadResponse.statusText}`;
+            }
+            throw new Error(errorMessage);
+          }
+          
+          const uploadResult = await uploadResponse.json();
+          console.log("✅ Upload successful:", uploadResult.secure_url);
+          imageUrl = uploadResult.secure_url;
+        } catch (uploadError) {
+          console.error("❌ Image upload error:", uploadError);
+          showErrorToast(`Image upload failed: ${uploadError.message}. Using default image.`);
+          // Continue with default image
+        }
+      }
+      
+      // 2. Prepare new employee object
+      const newEmployee = {
+        name: formData.name,
+        age: parseInt(formData.age, 10),
+        phone: formData.phone,
+        email: formData.email,
+        dateEmployed: formData.dateEmployed,
+        post: formData.post,
+        salary: parseFloat(formData.salary),
+        paymentMeans: formData.paymentMeans,
+        image: imageUrl,
+      };
 
-    setTimeout(() => {
-      setIsSaving(false);
+      // 3. Send to backend API
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000"}/api/employees`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify(newEmployee),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to add employee");
+      }
+
+      const savedEmployee = await response.json();
+      onEmployeeAdded(savedEmployee);
       onClose();
-    }, 500);
+    } catch (error) {
+      console.error("Error adding employee:", error);
+      showErrorToast(`Failed to add employee: ${error.message}`);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -109,6 +205,32 @@ const AddEmployeeForm = ({ onClose, onEmployeeAdded }) => {
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          
+          {/* Image Upload Section */}
+          <div className="flex flex-col items-center pb-4 border-b">
+            <div className="w-24 h-24 bg-gray-100 rounded-full overflow-hidden border-2 border-dashed border-gray-300 flex items-center justify-center">
+              {formData.image ? (
+                <img src={formData.image} alt="Employee Preview" className="w-full h-full object-cover" />
+              ) : (
+                <CloudArrowUpIcon className="w-8 h-8 text-gray-400" />
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current.click()}
+              className="mt-3 px-3 py-1 text-xs font-medium text-indigo-700 bg-indigo-100 rounded-lg hover:bg-indigo-200 transition"
+            >
+              {formData.image ? 'Change Photo' : 'Upload Photo'}
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept="image/*"
+              className="hidden"
+            />
+          </div>
+          
           {/* Basic Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <InputGroup

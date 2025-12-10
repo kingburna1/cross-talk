@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 // Icons imported for all sections
 import {
@@ -11,6 +11,14 @@ import TopProductsBarChart from './TopProductsBarChart';
 import CategoryPieChart from './CategoryPieChart';
 import ProfitExpenseBarChart from './ProfitExpenseBarChart';
 import CustomerRetentionPieChart from './CustomerRetentionPieChart';
+
+// Format currency in XAF
+const formatCurrency = (amount) => {
+    return amount.toLocaleString('fr-CM', { 
+        minimumFractionDigits: 0, 
+        maximumFractionDigits: 0 
+    }) + ' FCFA';
+};
 
 
 // --- HELPER COMPONENTS (Adjusted for responsiveness) ---
@@ -100,13 +108,46 @@ const itemVariants = {
 };
 
 const AnalyticsDashboard = () => {
+    const [salesStats, setSalesStats] = useState({
+        totalSales: 0,
+        todayTotal: 0,
+        monthlyRevenue: 0,
+        avgBasketValue: 0,
+        totalTransactions: 0
+    });
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchSalesStats = async () => {
+            try {
+                const response = await fetch('/api/sales/stats', {
+                    credentials: 'include'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setSalesStats(data);
+                }
+            } catch (error) {
+                console.error('Error fetching sales stats:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchSalesStats();
+        
+        // Refresh stats every 30 seconds
+        const interval = setInterval(fetchSalesStats, 30000);
+        return () => clearInterval(interval);
+    }, []);
     
     const salesMetrics = [
-        { title: "Total Sales (YTD)", value: "$154,320", icon: WalletIcon },
-        { title: "Today's Sales", value: "$1,250", icon: ShoppingCartIcon, colorClass: "text-green-600", bgColor: "bg-green-50" },
-        { title: "Monthly Revenue", value: "$15,890", icon: ArrowTrendingUpIcon },
-        { title: "Avg. Basket Value", value: "$45.25", icon: ChartPieIcon },
-        { title: "Total Transactions", value: "3,456", icon: CheckBadgeIcon },
+        { title: "Total Sales (YTD)", value: loading ? "..." : formatCurrency(salesStats.totalSales), icon: WalletIcon },
+        { title: "Today's Sales", value: loading ? "..." : formatCurrency(salesStats.todayTotal), icon: ShoppingCartIcon, colorClass: "text-green-600", bgColor: "bg-green-50" },
+        { title: "Monthly Revenue", value: loading ? "..." : formatCurrency(salesStats.monthlyRevenue), icon: ArrowTrendingUpIcon },
+        { title: "Avg. Basket Value", value: loading ? "..." : formatCurrency(salesStats.avgBasketValue), icon: ChartPieIcon },
+        { title: "Total Transactions", value: loading ? "..." : salesStats.totalTransactions.toLocaleString(), icon: CheckBadgeIcon },
     ];
     
     const operationalMetrics = [

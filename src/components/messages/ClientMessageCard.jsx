@@ -67,7 +67,17 @@ const ClientMessageCard = ({ messageData, onRemarkSubmit }) => {
               Resolved
             </span>
           )}
-          <span className="text-xs text-gray-400">{new Date(timestamp).toLocaleString()}</span>
+          <span className="text-xs text-gray-400">
+            {new Date(timestamp).toLocaleString('fr-CM', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false,
+              timeZone: 'Africa/Douala'
+            })}
+          </span>
         </div>
       </div>
 

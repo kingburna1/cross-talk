@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import React from "react";
 import { IoSearch } from "react-icons/io5";
@@ -28,10 +28,88 @@ import { useSearchStore } from "../../store/searchStore";
 
 const Header = () => {
   const [open, setOpen] = useState(false);
+  const [profileImage, setProfileImage] = useState("/image1.jpg");
+  const [notificationCount, setNotificationCount] = useState(0);
 
    const { search, setSearch } = useSearchStore();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  // Fetch admin profile image
+  useEffect(() => {
+    const fetchProfileImage = async () => {
+      try {
+        const response = await fetch('/api/users/me', {
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const user = await response.json();
+          if (user.imageSrc) {
+            setProfileImage(user.imageSrc);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching profile image:', error);
+      }
+    };
+
+    fetchProfileImage();
+
+    // Listen for profile updates
+    const handleProfileUpdate = (event) => {
+      if (event.detail?.imageSrc) {
+        setProfileImage(event.detail.imageSrc);
+      }
+    };
+
+    window.addEventListener('profileUpdated', handleProfileUpdate);
+    return () => window.removeEventListener('profileUpdated', handleProfileUpdate);
+  }, []);
+
+  // Fetch notification count
+  useEffect(() => {
+    const fetchNotificationCount = async () => {
+      try {
+        const response = await fetch('/api/notifications', {
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const notifications = await response.json();
+          // Count unread notifications
+          const unreadCount = notifications.filter(n => !n.isRead).length;
+          setNotificationCount(unreadCount);
+        }
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+      }
+    };
+
+    fetchNotificationCount();
+
+    // Refresh notification count every 5 seconds for real-time updates
+    const interval = setInterval(fetchNotificationCount, 5000);
+
+    // Listen for notification page visits to reset count
+    const handleNotificationReset = () => {
+      setNotificationCount(0);
+    };
+
+    // Listen for new notifications to immediately refresh count
+    const handleNewNotification = () => {
+      fetchNotificationCount();
+    };
+
+    window.addEventListener('notificationsViewed', handleNotificationReset);
+    window.addEventListener('newNotificationCreated', handleNewNotification);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('notificationsViewed', handleNotificationReset);
+      window.removeEventListener('newNotificationCreated', handleNewNotification);
+    };
+  }, []);
   const handleMenuClick = () => {
     setIsMenuOpen((prev) => !prev);
   };
@@ -95,7 +173,7 @@ const Header = () => {
             <div className="w-full bg-green-400 h-10 text-white p-4 flex justify-between items-center z-50">
               <div className="bg-white rounded-full h-[35px] w-[35px] overflow-hidden flex items-center justify-center">
                 <Image
-                  src="/image1.jpg"
+                  src={profileImage}
                   alt="text"
                   width={35}
                   height={35}
@@ -134,7 +212,7 @@ const Header = () => {
 
       <div className="flex gap-2 items-center">
         <div>
-          <Image src="/globe.svg" alt="Logo" width={30} height={20} />
+          <Image src="/image3.png" alt="Logo" width={30} height={20} />
         </div>
         <h3 className="text-xs md:text-lg">Cross-Talk</h3>
       </div>
@@ -200,21 +278,23 @@ const Header = () => {
             <p>1</p>
           </div>
         </div>
-        <div className="relative">
+        <Link href="/dashboard/notifications" className="relative">
           <IoMdNotificationsOutline className="text-2xl" />
-          <div className="absolute top-0 right-0 bg-red-700 rounded-full w-3 h-3 flex justify-center items-center text-white text-xs">
-            <p>1</p>
-          </div>
-        </div>
-        <div className="bg-white rounded-full h-[35px] w-[35px] overflow-hidden flex items-center justify-center">
+          {notificationCount > 0 && (
+            <div className="absolute top-0 right-0 bg-red-700 rounded-full min-w-[12px] h-3 px-1 flex justify-center items-center text-white text-xs">
+              <p>{notificationCount > 9 ? '9+' : notificationCount}</p>
+            </div>
+          )}
+        </Link>
+        <Link href="/dashboard/profile" className="bg-white rounded-full h-[35px] w-[35px] overflow-hidden flex items-center justify-center">
           <Image
-            src="/image1.jpg"
+            src={profileImage}
             alt="text"
             width={35}
             height={35}
             className="object-cover"
           />
-        </div>
+        </Link>
       </div>
     </div>
   );

@@ -5,7 +5,11 @@ const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true, lowercase: true },
   password: { type: String, required: true }, // hashed
-  role: { type: String, enum: ['admin','employee'], default: 'employee' }
+  role: { type: String, enum: ['admin','employee'], default: 'employee' },
+  phone: { type: String },
+  address: { type: String },
+  timezone: { type: String, default: 'WAT (+1 GMT)' },
+  imageSrc: { type: String }
 }, { timestamps: true });
 
 // Hash password before save

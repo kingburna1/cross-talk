@@ -1,6 +1,8 @@
 'use client'
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
+import { showSuccessToast, showErrorToast, showInfoToast, showWarningToast, showConfirmToast } from "../../lib/toast";
 import {
     PlusIcon,
     PencilSquareIcon,
@@ -21,104 +23,106 @@ import {
 // --- GLOBAL CONFIGURATION & UTILS ---
 
 const formatCurrency = (amount) => {
-    // Ensure amount is a number before formatting
     const num = Number(amount) || 0; 
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("fr-CM", {
         style: "currency",
-        currency: "USD",
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
+        currency: "XAF",
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
     }).format(num);
 };
 
-const DUMMY_PRODUCTS = [
-    { id: 'p001', name: 'Premium Coffee Beans (1kg)', sku: 'CFB-1K', price: 18.50, stock: 50, sales: 200, revenue: 3700.00 },
-    { id: 'p002', name: 'Organic Green Tea (Box of 20)', sku: 'OGT-20', price: 5.99, stock: 120, sales: 500, revenue: 2995.00 },
-    { id: 'p003', name: 'Stainless Steel Water Bottle', sku: 'SS-WTR', price: 25.00, stock: 80, sales: 150, revenue: 3750.00 },
-    { id: 'p004', name: 'Ergonomic Desk Chair', sku: 'EDC-01', price: 199.99, stock: 10, sales: 5, revenue: 999.95 },
-];
 
-const LOCAL_STORAGE_KEY_PRODUCTS = 'sales_inventory_products';
-const LOCAL_STORAGE_KEY_SALES = 'sales_inventory_transactions';
+// --- DATABASE HOOK ---
 
-
-// --- LOCAL STORAGE DATA HOOK ---
-
-const useLocalStorageData = () => {
+const useDatabaseProducts = () => {
     const [products, setProducts] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    // 1. Load Data on Mount and Initialize with Dummy Data
     useEffect(() => {
-        try {
-            const storedProducts = localStorage.getItem(LOCAL_STORAGE_KEY_PRODUCTS);
-            if (storedProducts) {
-                // If data exists, load it
-                setProducts(JSON.parse(storedProducts));
-            } else {
-                // If no data, initialize with dummy data
-                localStorage.setItem(LOCAL_STORAGE_KEY_PRODUCTS, JSON.stringify(DUMMY_PRODUCTS));
-                setProducts(DUMMY_PRODUCTS);
+        const loadProducts = async () => {
+            try {
+                const res = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000"}/api/products`,
+                    { credentials: "include" }
+                );
+
+                if (!res.ok) {
+                    console.error("Failed to fetch products");
+                    setIsLoading(false);
+                    return;
+                }
+
+                const dbProducts = await res.json();
+                
+                // Map products to POS format
+                const mapped = dbProducts.map(p => ({
+                    id: p._id,
+                    name: p.name,
+                    sku: p.name.substring(0, 10).toUpperCase(),
+                    price: p.sellPrice || 0,
+                    stock: p.qtyLeft || 0,
+                }));
+
+                setProducts(mapped);
+            } catch (err) {
+                console.error("Network error loading products:", err);
+            } finally {
+                setIsLoading(false);
             }
-        } catch (error) {
-            console.error("Error loading data from localStorage:", error);
-            setProducts(DUMMY_PRODUCTS); // Fallback to dummy data
-        } finally {
-            setIsLoading(false);
-        }
+        };
+
+        loadProducts();
     }, []);
 
-    // Helper to update localStorage
-    const updateLocalStorage = (key, data) => {
-        try {
-            localStorage.setItem(key, JSON.stringify(data));
-        } catch (error) {
-            console.error(`Error saving data to ${key} in localStorage:`, error);
-        }
-    };
-
-    // 2. Save Sale & Update Stock
     const saveSale = useCallback(async (saleData, lineItems) => {
         try {
-            // --- TRANSACTION 1: Update Products Stock ---
-            const newProducts = products.map(p => {
+            const response = await fetch(
+                `${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000"}/api/sales`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    credentials: "include",
+                    body: JSON.stringify({ ...saleData, lineItems }),
+                }
+            );
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Failed to save sale");
+            }
+
+            const result = await response.json();
+            const savedSale = result.sale || result;
+            const lowStockNotifications = result.lowStockNotifications || [];
+            
+            // Trigger notification refresh event
+            window.dispatchEvent(new CustomEvent('newNotificationCreated'));
+            
+            // Show toast notifications for low stock items
+            if (lowStockNotifications.length > 0) {
+                lowStockNotifications.forEach(notification => {
+                    showWarningToast(notification.message);
+                });
+            }
+            
+            // Update local products stock
+            setProducts(prev => prev.map(p => {
                 const itemSold = lineItems.find(item => item.productId === p.id);
                 if (itemSold) {
-                    const newStock = Math.max(0, (Number(p.stock) || 0) - itemSold.quantity);
-                    const newSales = (Number(p.sales) || 0) + itemSold.quantity;
-                    const newRevenue = (Number(p.revenue) || 0) + itemSold.totalPrice;
-                    return { 
-                        ...p, 
-                        stock: newStock,
-                        sales: newSales,
-                        revenue: newRevenue,
-                    };
+                    return { ...p, stock: Math.max(0, p.stock - itemSold.quantity) };
                 }
                 return p;
-            });
-            setProducts(newProducts);
-            updateLocalStorage(LOCAL_STORAGE_KEY_PRODUCTS, newProducts);
+            }));
 
-            // --- TRANSACTION 2: Save the new sale transaction ---
-            const storedSales = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_SALES) || '[]');
-            const newSaleId = `S-${Date.now()}`;
-            const newTransaction = {
-                id: newSaleId,
-                ...saleData,
-                lineItems,
-                timestamp: new Date().toISOString(),
-            };
-            
-            const newStoredSales = [...storedSales, newTransaction];
-            updateLocalStorage(LOCAL_STORAGE_KEY_SALES, newStoredSales);
-
-            return true; // Success
+            return { success: true, sale: savedSale, lowStockNotifications };
         } catch (e) {
-            console.error("Error saving sale or updating inventory: ", e);
-            return false; // Failure
+            console.error("Error saving sale:", e);
+            return { success: false, error: e.message };
         }
-    }, [products]);
-
+    }, []);
 
     return {
         products,
@@ -298,7 +302,7 @@ const SalesItemsTable = ({ lineItems, onRemoveItem, onEditItem }) => {
                         <AnimatePresence initial={false}>
                             {lineItems.map((item) => (
                                 <motion.tr
-                                    key={item.productId}
+                                    key={item.lineItemId}
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, x: -30 }}
@@ -315,14 +319,14 @@ const SalesItemsTable = ({ lineItems, onRemoveItem, onEditItem }) => {
                                     <td className="px-3 py-3 whitespace-nowrap text-center text-sm font-medium">
                                         {/* Edit logic is complex due to stock, but we include the button */}
                                         <button 
-                                            onClick={() => onEditItem(item.productId)} 
+                                            onClick={() => onEditItem(item.lineItemId)} 
                                             className="text-indigo-600 hover:text-indigo-900 p-1"
                                             title="Edit Item (Simulated)"
                                         >
                                             <PencilSquareIcon className="w-4 h-4" />
                                         </button>
                                         <button 
-                                            onClick={() => onRemoveItem(item.productId)} 
+                                            onClick={() => onRemoveItem(item.lineItemId)} 
                                             className="text-red-600 hover:text-red-900 p-1 ml-1"
                                             title="Remove Item"
                                         >
@@ -397,14 +401,148 @@ const SummaryRow = ({ label, value, color, size = 'text-md font-medium' }) => (
 
 // --- 6. ACTION BUTTONS COMPONENT ---
 
-const ActionButtons = ({ onSave, onCancel, onPrint, isSaleValid, isProcessing }) => {
-    // Note: Edit Sale functionality is complex (requires reversing stock, finding transaction) and is simulated.
+const generateReceiptPDF = (saleData, lineItems, totals) => {
+    const { customer, summary } = saleData;
+    const date = new Date().toLocaleString('fr-CM', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+        timeZone: 'Africa/Douala'
+    });
+    
+    // Create receipt HTML
+    const receiptHTML = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>Sales Receipt</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+                .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+                .logo { width: 80px; height: 80px; margin: 0 auto 10px; }
+                .company-name { font-size: 24px; font-weight: bold; color: #333; margin: 10px 0; }
+                .receipt-title { font-size: 20px; color: #666; margin-top: 10px; }
+                .info-section { margin: 20px 0; }
+                .info-row { display: flex; justify-content: space-between; padding: 5px 0; }
+                .label { font-weight: bold; color: #555; }
+                table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                th { background: #f0f0f0; padding: 10px; text-align: left; border-bottom: 2px solid #333; }
+                td { padding: 10px; border-bottom: 1px solid #ddd; }
+                .total-row { font-weight: bold; background: #f9f9f9; }
+                .grand-total { font-size: 18px; color: #333; background: #e8e8e8; }
+                .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 2px solid #333; color: #666; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <div class="logo">
+                    <img src="/image3.png" alt="Company Logo" style="width: 80px; height: 80px; object-fit: contain;" />
+                </div>
+                <div class="company-name">Cross-Talk Supermarket</div>
+                <div class="receipt-title">SALES RECEIPT</div>
+            </div>
+            
+            <div class="info-section">
+                <div class="info-row">
+                    <span class="label">Date:</span>
+                    <span>${date}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Customer:</span>
+                    <span>${customer.name || 'Walk-in Customer'}</span>
+                </div>
+                ${customer.phone ? `<div class="info-row"><span class="label">Phone:</span><span>${customer.phone}</span></div>` : ''}
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th style="text-align: right;">Unit Price</th>
+                        <th style="text-align: center;">Qty</th>
+                        <th style="text-align: right;">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${lineItems.map(item => `
+                        <tr>
+                            <td>${item.productName}</td>
+                            <td style="text-align: right;">${formatCurrency(item.unitPrice)}</td>
+                            <td style="text-align: center;">${item.quantity}</td>
+                            <td style="text-align: right;">${formatCurrency(item.totalPrice)}</td>
+                        </tr>
+                    `).join('')}
+                    <tr class="total-row">
+                        <td colspan="3">Subtotal:</td>
+                        <td style="text-align: right;">${formatCurrency(totals.subtotal)}</td>
+                    </tr>
+                    <tr class="total-row">
+                        <td colspan="3">Discount:</td>
+                        <td style="text-align: right;">-${formatCurrency(totals.discount)}</td>
+                    </tr>
+                    <tr class="total-row">
+                        <td colspan="3">Tax (5%):</td>
+                        <td style="text-align: right;">${formatCurrency(totals.tax)}</td>
+                    </tr>
+                    <tr class="grand-total">
+                        <td colspan="3"><strong>GRAND TOTAL:</strong></td>
+                        <td style="text-align: right;"><strong>${formatCurrency(totals.grandTotal)}</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="info-section">
+                <div class="info-row">
+                    <span class="label">Payment Method:</span>
+                    <span>${summary.paymentMethod}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Amount Paid:</span>
+                    <span>${formatCurrency(summary.amountPaid)}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Change:</span>
+                    <span>${formatCurrency(totals.change)}</span>
+                </div>
+            </div>
+
+            <div class="footer">
+                <p>Thank you for your business!</p>
+                <p style="font-size: 12px;">This is a computer-generated receipt.</p>
+            </div>
+        </body>
+        </html>
+    `;
+
+    // Create a new window and print
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    if (!printWindow) {
+        showWarningToast('Please allow pop-ups to print receipts');
+        return;
+    }
+    
+    printWindow.document.write(receiptHTML);
+    printWindow.document.close();
+    
+    // Wait for content to load then print
+    setTimeout(() => {
+        printWindow.focus();
+        printWindow.print();
+    }, 500);
+};
+
+const ActionButtons = ({ onSave, onCancel, onPrint, onEdit, isSaleValid, isProcessing }) => {
     return (
         <div className="flex flex-wrap gap-3 p-4 bg-white rounded-xl shadow-lg border border-gray-100 md:col-span-3">
             <button
                 onClick={onSave}
                 disabled={!isSaleValid || isProcessing}
-                className="flex-1 min-w-[120px] py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition disabled:bg-gray-400"
+                className="flex-1 min-w-[120px] py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
                 <ClipboardDocumentCheckIcon className="w-5 h-5 inline mr-1" />
                 {isProcessing ? 'Saving...' : 'Save Sale'}
@@ -412,7 +550,8 @@ const ActionButtons = ({ onSave, onCancel, onPrint, isSaleValid, isProcessing })
             
             <button
                 onClick={onCancel}
-                className="flex-1 min-w-[120px] py-3 bg-red-500 text-white font-semibold rounded-lg shadow-md hover:bg-red-600 transition"
+                disabled={isProcessing}
+                className="flex-1 min-w-[120px] py-3 bg-red-500 text-white font-semibold rounded-lg shadow-md hover:bg-red-600 transition disabled:bg-gray-400"
             >
                 <XMarkIcon className="w-5 h-5 inline mr-1" />
                 Discard Sale
@@ -420,14 +559,15 @@ const ActionButtons = ({ onSave, onCancel, onPrint, isSaleValid, isProcessing })
             
             <button
                 onClick={onPrint}
-                className="flex-1 min-w-[120px] py-3 bg-gray-500 text-white font-semibold rounded-lg shadow-md hover:bg-gray-600 transition"
+                disabled={!isSaleValid}
+                className="flex-1 min-w-[120px] py-3 bg-gray-500 text-white font-semibold rounded-lg shadow-md hover:bg-gray-600 transition disabled:bg-gray-400"
             >
                 <PrinterIcon className="w-5 h-5 inline mr-1" />
                 Print Receipt
             </button>
             
-             <button
-                onClick={() => alert("Edit Sale functionality is simulated. It would require complex stock reversal logic.")}
+            <button
+                onClick={onEdit}
                 className="flex-1 min-w-[120px] py-3 bg-yellow-500 text-white font-semibold rounded-lg shadow-md hover:bg-yellow-600 transition"
             >
                 <PencilSquareIcon className="w-5 h-5 inline mr-1" />
@@ -441,7 +581,8 @@ const ActionButtons = ({ onSave, onCancel, onPrint, isSaleValid, isProcessing })
 // --- MAIN SALES INVENTORY MANAGEMENT COMPONENT (Parent) ---
 
 const SalesInventoryManagement = () => {
-    const { products, isLoading, saveSale } = useLocalStorageData();
+    const router = useRouter();
+    const { products, isLoading, saveSale } = useDatabaseProducts();
     
     // 2. Customer State
     const [customer, setCustomer] = useState({ name: '', phone: '', notes: '' });
@@ -450,10 +591,11 @@ const SalesInventoryManagement = () => {
     const [lineItems, setLineItems] = useState([]);
 
     // 5. Payment State
-    const [discount, setDiscount] = useState(0); // Simple fixed discount for demo
+    const [discount, setDiscount] = useState(0);
     const [paymentMethod, setPaymentMethod] = useState('Cash');
     const [amountPaid, setAmountPaid] = useState(0);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [currentSaleId, setCurrentSaleId] = useState(null);
     
     // Utility for New Sale (Reset All State)
     const startNewSale = useCallback(() => {
@@ -462,13 +604,14 @@ const SalesInventoryManagement = () => {
         setDiscount(0);
         setPaymentMethod('Cash');
         setAmountPaid(0);
+        setCurrentSaleId(null);
     }, []);
 
 
     // Aggregated Totals Calculation
     const totals = useMemo(() => {
         const subtotal = lineItems.reduce((sum, item) => sum + item.totalPrice, 0);
-        const appliedDiscount = discount; // In a real app, this would be calculated
+        const appliedDiscount = discount;
         const taxableBase = subtotal - appliedDiscount;
         const taxRate = 0.05; // 5% VAT/Tax
         const tax = taxableBase * taxRate;
@@ -489,20 +632,31 @@ const SalesInventoryManagement = () => {
 
     // Line Item Handlers
     const handleAddItem = (item) => {
-        // Simple logic: add item, assumes unique product per entry for simplicity
-        setLineItems(prev => [...prev, item]);
+        // Add unique lineItemId to prevent duplicate keys
+        const lineItemWithId = { ...item, lineItemId: Date.now() + Math.random() };
+        setLineItems(prev => [...prev, lineItemWithId]);
     };
 
-    const handleRemoveItem = (productId) => {
-        // Removes ALL line items associated with this product ID.
-        // In a real app, you might only remove one entry based on a unique transaction ID.
-        setLineItems(prev => prev.filter(item => item.productId !== productId));
+    const handleRemoveItem = (lineItemId) => {
+        setLineItems(prev => prev.filter(item => item.lineItemId !== lineItemId));
+    };
+
+    const handleEditItem = (lineItemId) => {
+        // For edit, we remove and let user re-add
+        const item = lineItems.find(i => i.lineItemId === lineItemId);
+        if (item) {
+            showConfirmToast(
+                `Remove ${item.productName} so you can re-add it with different quantity?`,
+                () => handleRemoveItem(lineItemId)
+            );
+        }
     };
 
     // 6. Action Handlers
     const handleSaveSale = async () => {
         if (!isSaleValid) {
-            return alert("Cannot save sale: Please add items and ensure the amount paid covers the Grand Total.");
+            showErrorToast("Cannot save sale: Please add items and ensure the amount paid covers the Grand Total.");
+            return;
         }
         
         setIsProcessing(true);
@@ -513,23 +667,53 @@ const SalesInventoryManagement = () => {
                 paymentMethod,
                 amountPaid,
             },
-            
         };
 
-        const success = await saveSale(saleData, lineItems);
+        const result = await saveSale(saleData, lineItems);
         setIsProcessing(false);
         
-        if (success) {
-            alert(`Sale of ${formatCurrency(totals.grandTotal)} successfully saved to local storage! Stock has been updated. Starting new sale.`);
-            startNewSale();
+        if (result.success) {
+            showSuccessToast(`Sale of ${formatCurrency(totals.grandTotal)} successfully saved! Stock has been updated.`);
+            setCurrentSaleId(result.sale._id);
+            // Don't reset immediately, allow print first
+            setTimeout(startNewSale, 1000);
         } else {
-            alert("Failed to save sale. Check console for details.");
+            showErrorToast(`Failed to save sale: ${result.error}`);
+        }
+    };
+
+    const handlePrintReceipt = () => {
+        if (!isSaleValid) {
+            showWarningToast("Cannot print: Please complete the sale first.");
+            return;
+        }
+        
+        const saleData = {
+            customer,
+            summary: {
+                ...totals,
+                paymentMethod,
+                amountPaid,
+            },
+        };
+        
+        generateReceiptPDF(saleData, lineItems, totals);
+    };
+
+    const handleDiscardSale = () => {
+        if (lineItems.length > 0) {
+            showConfirmToast(
+                "Are you sure you want to discard this sale? All items will be removed.",
+                () => startNewSale()
+            );
+        } else {
+            startNewSale();
         }
     };
     
     if (isLoading) {
         return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-xl font-semibold text-indigo-600">
-            <ArrowPathIcon className="w-6 h-6 mr-2 animate-spin" /> Loading Inventory...
+            <ArrowPathIcon className="w-6 h-6 mr-2 animate-spin" /> Loading Products...
         </div>;
     }
 
@@ -546,36 +730,32 @@ const SalesInventoryManagement = () => {
                         <button onClick={startNewSale} className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition">
                             <PlusIcon className="w-4 h-4 inline mr-1" /> New Sale
                         </button>
-                        <button onClick={() => alert("Functionality to view all sales is not implemented yet. Sales are stored in local storage.")} className="px-4 py-2 bg-gray-200 text-gray-800 text-sm font-semibold rounded-lg hover:bg-gray-300 transition">
+                        <button onClick={() => router.push('/dashboard/sales')} className="px-4 py-2 bg-gray-200 text-gray-800 text-sm font-semibold rounded-lg hover:bg-gray-300 transition">
                             <MagnifyingGlassIcon className="w-4 h-4 inline mr-1" /> View All Sales
-                        </button>
-                        <button onClick={() => alert("Print functionality simulated.")} className="px-4 py-2 bg-gray-200 text-gray-800 text-sm font-semibold rounded-lg hover:bg-gray-300 transition">
-                            <PrinterIcon className="w-4 h-4 inline mr-1" /> Print Receipt
                         </button>
                     </div>
                     <p className="text-xs mt-2 text-gray-500 flex items-center">
-                        <ServerStackIcon className="w-4 h-4 mr-1 text-red-500" /> Data Storage: Local Storage (Dummy Data Initialized)
+                        <ServerStackIcon className="w-4 h-4 mr-1 text-green-500" /> Data Storage: MongoDB Database
                     </p>
                 </header>
 
-                {/* 2 & 3. Top Section: Customer and Add Item (Horizontal on Large Screens) */}
+                {/* 2 & 3. Top Section: Customer and Add Item */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <CustomerInfoCard customer={customer} setCustomer={setCustomer} />
                     <AddItemCard products={products} onAddItem={handleAddItem} />
                 </div>
 
-                {/* 4. Sales Items Table (Full Width) */}
+                {/* 4. Sales Items Table */}
                 <div className="mb-6">
                     <SalesItemsTable 
                         lineItems={lineItems} 
                         onRemoveItem={handleRemoveItem} 
-                        onEditItem={(id) => alert(`Editing item ${id} is a complex stock adjustment feature, which is currently simulated.`)}
+                        onEditItem={handleEditItem}
                     />
                 </div>
 
-                {/* 5 & 6. Bottom Section: Summary and Actions (Horizontal on Large Screens) */}
+                {/* 5 & 6. Bottom Section: Summary and Actions */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Order Summary takes 2/3 width on large screens */}
                     <div className="md:col-span-2">
                         <OrderSummaryCard 
                             totals={totals}
@@ -583,16 +763,16 @@ const SalesInventoryManagement = () => {
                             setPaymentMethod={setPaymentMethod}
                             amountPaid={amountPaid}
                             setAmountPaid={setAmountPaid}
-                            onCalculateChange={() => totals.change} // Calculation happens on state change
+                            onCalculateChange={() => totals.change}
                         />
                     </div>
                     
-                    {/* Action Buttons take 1/3 width on large screens */}
                     <div className="md:col-span-1">
                         <ActionButtons 
                             onSave={handleSaveSale}
-                            onCancel={startNewSale}
-                            onPrint={() => alert("Simulating print...")}
+                            onCancel={handleDiscardSale}
+                            onPrint={handlePrintReceipt}
+                            onEdit={() => showInfoToast("Edit functionality: Modify quantities or remove items above, then save again.")}
                             isSaleValid={isSaleValid}
                             isProcessing={isProcessing}
                         />

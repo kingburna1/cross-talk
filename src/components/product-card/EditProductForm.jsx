@@ -1,7 +1,8 @@
 // src/components/product-card/EditProductForm.jsx
 "use client";
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
+import { showErrorToast, showWarningToast } from "../../lib/toast";
 import {
   XMarkIcon,
   PencilIcon,
@@ -45,26 +46,85 @@ const EditProductForm = ({ product, onUpdate, onClose }) => {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSaving(true);
 
-    // Prepare updated product object
-    const updatedProduct = {
-      ...formData,
-      buyPrice: parseFloat(formData.buyPrice),
-      sellPrice: parseFloat(formData.sellPrice),
-      qtyBought: parseInt(formData.qtyBought, 10),
-      qtyLeft: parseInt(formData.qtyLeft, 10), // Allow editing Qty Left manually
-    };
+    try {
+      let imageUrl = formData.imageSrc;
+      
+      // 1. Upload new image to Cloudinary if a file was selected
+      if (formData.imageFile) {
+        const formDataToUpload = new FormData();
+        formDataToUpload.append('file', formData.imageFile);
+        
+        const uploadResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000"}/api/upload`,
+          {
+            method: "POST",
+            credentials: "include",
+            body: formDataToUpload,
+          }
+        );
+        
+        if (!uploadResponse.ok) {
+          throw new Error("Failed to upload image");
+        }
+        
+        const uploadResult = await uploadResponse.json();
+        imageUrl = uploadResult.secure_url;
+      }
+      
+      // 2. Prepare updated product object
+      const updatedProduct = {
+        name: formData.name,
+        buyPrice: parseFloat(formData.buyPrice),
+        sellPrice: parseFloat(formData.sellPrice),
+        qtyBought: parseInt(formData.qtyBought, 10),
+        qtyLeft: parseInt(formData.qtyLeft, 10),
+        supplierName: formData.supplierName,
+        supplierContact: formData.supplierContact,
+        supplierEmail: formData.supplierEmail,
+        imageSrc: imageUrl,
+      };
 
-    // Call the parent update function
-    onUpdate(updatedProduct);
+      // 3. Send update to backend API
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000"}/api/products/${product._id || product.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify(updatedProduct),
+        }
+      );
 
-    setTimeout(() => {
-      setIsSaving(false);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to update product");
+      }
+
+      const result = await response.json();
+      const savedProduct = result.product || result;
+      const lowStockNotification = result.lowStockNotification;
+
+      // Show low stock warning if present
+      if (lowStockNotification) {
+        showWarningToast(lowStockNotification.message);
+      }
+
+      // Call the parent update function with the response from server
+      onUpdate(savedProduct);
+
       onClose();
-    }, 500);
+    } catch (error) {
+      console.error("Error updating product:", error);
+      showErrorToast(`Failed to update product: ${error.message}`);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (

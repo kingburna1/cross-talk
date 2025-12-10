@@ -41,34 +41,83 @@ const AddProductForm = ({ onProductAdded, onClose }) => {
         }
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSaving(true);
         
-        // 1. Prepare new product object (QtyLeft should equal QtyBought initially)
-        const newProduct = {
-            ...formData,
-            buyPrice: parseFloat(formData.buyPrice),
-            sellPrice: parseFloat(formData.sellPrice),
-            qtyBought: parseInt(formData.qtyBought, 10),
-            qtyLeft: parseInt(formData.qtyBought, 10),
-            // The imageSrc is the URL for the temporary file upload
-        };
+        try {
+            let imageUrl = '';
+            
+            // 1. Upload image to Cloudinary if a file was selected
+            if (formData.imageFile) {
+                const formDataToUpload = new FormData();
+                formDataToUpload.append('file', formData.imageFile);
+                
+                const uploadResponse = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000"}/api/upload`,
+                    {
+                        method: "POST",
+                        credentials: "include",
+                        body: formDataToUpload,
+                    }
+                );
+                
+                if (!uploadResponse.ok) {
+                    throw new Error("Failed to upload image");
+                }
+                
+                const uploadResult = await uploadResponse.json();
+                imageUrl = uploadResult.secure_url;
+            }
+            
+            // 2. Prepare new product object
+            const newProduct = {
+                name: formData.name,
+                buyPrice: parseFloat(formData.buyPrice),
+                sellPrice: parseFloat(formData.sellPrice),
+                qtyBought: parseInt(formData.qtyBought, 10),
+                qtyLeft: parseInt(formData.qtyBought, 10),
+                supplierName: formData.supplierName,
+                supplierContact: formData.supplierContact,
+                supplierEmail: formData.supplierEmail,
+                imageSrc: imageUrl,
+            };
 
-        // 2. Add to Local Storage
-        const existingProducts = JSON.parse(localStorage.getItem('tempProducts')) || [];
-        existingProducts.unshift(newProduct); // Add to the beginning
-        localStorage.setItem('tempProducts', JSON.stringify(existingProducts));
+            // 3. Send to backend API
+            const response = await fetch(
+                `${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000"}/api/products`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    credentials: "include",
+                    body: JSON.stringify(newProduct),
+                }
+            );
 
-        // 3. Notify parent component (page.jsx) that a product was added
-        onProductAdded(newProduct);
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Failed to add product");
+            }
 
-        // 4. Reset and Close
-        setTimeout(() => {
-            setIsSaving(false);
+            const savedProduct = await response.json();
+
+            // Trigger notification refresh event
+            window.dispatchEvent(new CustomEvent('newNotificationCreated'));
+
+            // 4. Notify parent component with the saved product (includes _id from MongoDB)
+            onProductAdded(savedProduct);
+
+            // 5. Reset and Close
             setFormData(initialFormData);
             onClose();
-        }, 500);
+        } catch (error) {
+            console.error("Error adding product:", error);
+            showErrorToast(`Failed to add product: ${error.message}`);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (

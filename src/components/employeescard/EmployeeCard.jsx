@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { PencilSquareIcon } from "@heroicons/react/24/outline";
+import { showInfoToast, showConfirmToast } from "../../lib/toast";
 import {
   EnvelopeIcon,
   PhoneIcon,
@@ -36,17 +37,20 @@ const EmployeeCard = ({ employee, onEdit,onDelete }) => {
     if (onEdit) {
       onEdit(employee);
     } else {
-      alert(`Editing details for ${employee.name}`);
+      showInfoToast(`Editing details for ${employee.name}`);
     }
   };
 
     const handleDelete = (e) => {
         e.stopPropagation(); // Prevent card container clicks if any
-        if (window.confirm(`Are you sure you want to permanently delete ${employee.name}?`)) {
-            if (onDelete) {
-                onDelete(employee.id);
+        showConfirmToast(
+            `Are you sure you want to permanently delete ${employee.name}?`,
+            () => {
+                if (onDelete) {
+                    onDelete(employee.id);
+                }
             }
-        }
+        );
     };
 
   // Format currency and date
@@ -68,13 +72,13 @@ const EmployeeCard = ({ employee, onEdit,onDelete }) => {
         <div className="flex items-center min-w-0 grow">
           {/* Employee Image (Placeholder) */}
           <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-200 rounded-full overflow-hidden flex-none mr-3 sm:mr-4">
-                   <Image
-                              src={employee.image}
-                              width={56}
-                              height={56}
-                              alt={employee.name}
-                              className="w-14 h-14 object-cover rounded-md mr-4 shrink-0"
-                            />
+            <Image
+              src={employee.image || "/image2.jpg"}
+              width={64}
+              height={64}
+              alt={`${employee.name} profile picture`}
+              className="w-full h-full object-cover"
+            />
           </div>
 
           {/* Name and Age (Stacks on smallest screen) */}

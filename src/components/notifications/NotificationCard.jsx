@@ -44,7 +44,15 @@ const NotificationCard = ({ notification, onDismiss, onViewMore }) => {
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
 
-    return date.toLocaleString(); // Fallback for older notifications
+    return date.toLocaleString('fr-CM', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'Africa/Douala'
+    }); // Fallback for older notifications
   };
 
   const shortMessage = message.length > 100 ? message.substring(0, 97) + '...' : message;
