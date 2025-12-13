@@ -17,6 +17,7 @@ import statsRoutes from './routes/statsRoutes.js';
 import cookieParser from 'cookie-parser';
 import testEmailRoutes from "./routes/testEmail.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
+import aiRoutes from "./routes/aiRoutes.js";
 import { configureCloudinary } from "./utils/cloudinary.js";
 
 // Get current directory in ES modules
@@ -68,6 +69,7 @@ app.use("/api/messages", messageRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/sales", salesRoutes);
 app.use("/api/stats", statsRoutes);
+app.use("/api/ai", aiRoutes);
 
 
 // --- Database Connection ---
