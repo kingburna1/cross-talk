@@ -272,12 +272,12 @@ const Header = () => {
       </div>
 
       <div className="flex gap-3 items-center text-gray-600 ">
-        <div className="relative">
+        {/* <div className="relative">
           <PiShoppingCartSimpleBold className="text-2xl" />
           <div className="absolute top-0 right-0 bg-red-700 rounded-full w-3 h-3 flex justify-center items-center text-white text-xs">
-            <p>1</p>
+            <p>2</p>
           </div>
-        </div>
+        </div> */}
         <Link href="/dashboard/notifications" className="relative">
           <IoMdNotificationsOutline className="text-2xl" />
           {notificationCount > 0 && (

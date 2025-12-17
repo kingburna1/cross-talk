@@ -367,20 +367,21 @@ try {
                 <div className="w-full border-t border-gray-200"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white text-gray-500">
+                {/* <span className="px-4 bg-white text-gray-500">
                   Or sign in with
-                </span>
+                </span> */}
               </div>
             </div>
 
 
             {/* Sign Up Link */}
-            <p className="mt-8 text-gray-600 text-xs sm:text-sm"> {/* Reduced mt-12 to mt-8 and text size */}
+            {/* <p className="mt-8 text-gray-600 text-xs sm:text-sm"> 
                   Dont have an account?
               <a href="/signup" className="font-medium text-green-600 hover:underline">
                 Sign up here
               </a>
-            </p>
+            </p> */}
+            
           </div>
         </div>
       </div>

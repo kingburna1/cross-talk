@@ -90,8 +90,8 @@ const DashboardNotifications = () => {
       }
     }, 500);
 
-    // Poll for new notifications every 30 seconds
-    const interval = setInterval(fetchNotifications, 30000);
+    // Poll for new notifications every 5 minutes
+    const interval = setInterval(fetchNotifications, 300000);
     
     return () => {
       isMounted = false;
