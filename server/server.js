@@ -43,10 +43,7 @@ const port = process.env.PORT || 5000;
 
 // --- Middlewares ---
 // Allows your Next.js app to make requests to this server
-app.use(cors({
-  origin: 'http://localhost:3000',
-  credentials: true
-}));
+app.use(cors());
 // Allows the server to accept JSON data in the request body
 app.use(express.json()); 
 app.use(cookieParser());
