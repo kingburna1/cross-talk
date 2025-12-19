@@ -1,5 +1,0 @@
-{
-  "watch": ["server.js", "routes", "models", "middleware"],
-  "ignore": ["seedData.js"],
-  "ext": "js,json"
-}
