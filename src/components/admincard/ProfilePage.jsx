@@ -266,9 +266,9 @@ const AdminProfileCard = ({ userData, statsData }) => {
           </div>
         </div>
 
-        {/* ------------------------------------------------------------- */}
+        
         {/* 2. Admin Business Metrics (Column 2) */}
-        {/* ------------------------------------------------------------- */}
+      
         <div className="lg:col-span-1 space-y-6">
           <div className="bg-white shadow-xl rounded-xl p-6">
             <h2 className="text-xl font-semibold text-gray-700 mb-4 flex items-center">

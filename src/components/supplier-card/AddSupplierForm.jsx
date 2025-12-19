@@ -45,7 +45,7 @@ const AddSupplierForm = ({ onSupplierAdded, onClose }) => {
 
             // 2. Send to backend API
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000"}/api/suppliers`,
+                `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000"}/api/suppliers`,
                 {
                     method: "POST",
                     headers: {

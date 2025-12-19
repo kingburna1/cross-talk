@@ -73,7 +73,7 @@ const ProductStockCard = ({ product }) => {
       className="flex flex-col w-full p-4 mb-3 rounded-lg shadow-xl transition-all duration-300 bg-white border border-gray-200"
     >
       
-      {/* -------------------- ROW 1: Product Info (FIXED HORIZONTAL) -------------------- */}
+      {/*  -------------------- ROW 1: Product Info (FIXED HORIZONTAL) -------------------- */}
       <div className="flex items-start md:items-center justify-between pb-3 border-b border-gray-100 mb-3 w-full">
         
         <div className="flex items-center grow min-w-0 pr-4">
@@ -99,10 +99,10 @@ const ProductStockCard = ({ product }) => {
         </div>
       </div>
 
-      {/* -------------------- ROW 2: Financial Metrics & Review (Responsive Grid/Columns) -------------------- */}
+      
       <div className="flex flex-col lg:flex-row justify-between w-full">
         
-        {/* 1. Profit/Loss Metrics */}
+       
         <div className="metrics-grid grid grid-cols-2 gap-4 lg:w-1/2 lg:pr-6 border-b lg:border-b-0 lg:border-r border-gray-200 pb-4 lg:pb-0 mb-4 lg:mb-0">
           
           <MetricBlock 

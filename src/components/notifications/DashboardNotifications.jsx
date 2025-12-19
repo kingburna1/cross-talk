@@ -15,7 +15,7 @@ const DashboardNotifications = () => {
     const fetchNotifications = async () => {
       try {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000"}/api/notifications`,
+          `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000"}/api/notifications`,
           {
             credentials: "include",
           }
@@ -59,7 +59,7 @@ const DashboardNotifications = () => {
     const markAllAsRead = async () => {
       try {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000"}/api/notifications/mark-all-read`,
+          `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000"}/api/notifications/mark-all-read`,
           {
             method: 'PUT',
             credentials: "include",
@@ -106,7 +106,7 @@ const DashboardNotifications = () => {
 
       // Delete from server
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000"}/api/notifications/${idToDismiss}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000"}/api/notifications/${idToDismiss}`,
         {
           method: "DELETE",
           credentials: "include",
@@ -131,7 +131,7 @@ const DashboardNotifications = () => {
 
       // Update on server
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000"}/api/notifications/${idToRead}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000"}/api/notifications/${idToRead}`,
         {
           method: "PUT",
           headers: {

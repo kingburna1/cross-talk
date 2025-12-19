@@ -38,7 +38,7 @@ const EditSupplierForm = ({ supplier, onUpdate, onClose }) => {
 
             // Send update to backend API
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000"}/api/suppliers/${supplier._id || supplier.id}`,
+                `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000"}/api/suppliers/${supplier._id || supplier.id}`,
                 {
                     method: "PUT",
                     headers: {

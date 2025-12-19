@@ -31,7 +31,7 @@ const SalesPage = () => {
     const fetchSales = async () => {
         try {
             const res = await fetch(
-                `${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000"}/api/sales`,
+                `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000"}/api/sales`,
                 { credentials: "include" }
             )
 
@@ -56,7 +56,7 @@ const SalesPage = () => {
             async () => {
                 try {
                     const res = await fetch(
-                        `${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000"}/api/sales/${id}`,
+                        `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000"}/api/sales/${id}`,
                         {
                             method: "DELETE",
                             credentials: "include"

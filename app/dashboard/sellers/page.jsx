@@ -24,7 +24,7 @@ const SupplierPage = () => {
         const loadFromServer = async () => {
             try {
                 const res = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000"}/api/suppliers`,
+                    `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000"}/api/suppliers`,
                     { credentials: "include" }
                 );
 

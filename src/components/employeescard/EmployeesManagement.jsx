@@ -11,45 +11,7 @@ import AddEmployeeForm from "./AddEmployeeForm";
 import EditEmployeeForm from "./EditEmployeeForm";
 import { useSearchStore } from "../../store/searchStore";
 
-// Updated: Using valid placeholder URLs for images
-const dummyEmployees = [
-    {
-        id: 1,
-        image: "/image2.jpg",
-        name: "Alex Johnson",
-        age: 32,
-        phone: "555-0123",
-        email: "alex.j@example.com",
-        dateEmployed: "2020-08-15",
-        post: "Senior Sales Manager",
-        salary: 65000, // Annual Salary
-        paymentMeans: "Bank Transfer (Monthly)",
-    },
-    {
-        id: 2,
-        image: "/image2.jpg",
-        name: "Sarah Chen",
-        age: 25,
-        phone: "555-0456",
-        email: "sarah.c@example.com",
-        dateEmployed: "2023-01-20",
-        post: "Inventory Specialist",
-        salary: 42000, // Annual Salary
-        paymentMeans: "Mobile Pay (Bi-Weekly)",
-    },
-    {
-        id: 3,
-        image: "/image2.jpg",
-        name: "Michael B.",
-        age: 45,
-        phone: "555-0789",
-        email: "michael.b@example.com",
-        dateEmployed: "2019-05-10",
-        post: "Store Supervisor",
-        salary: 78000, // Annual Salary
-        paymentMeans: "Bank Transfer (Monthly)",
-    },
-];
+
 
 // Helper function for currency formatting
 const formatCurrency = (amount) => {
@@ -60,9 +22,7 @@ const formatCurrency = (amount) => {
 };
 
 const EmployeesManagement = () => {
-    // ------------------------------------------------------------------
-    // 🛑 ALL HOOKS MUST BE DEFINED HERE, BEFORE ANY CONDITIONAL LOGIC 🛑
-    // ------------------------------------------------------------------
+   
 
     // 1-4. useState
     const [employees, setEmployees] = useState([]);
@@ -78,7 +38,7 @@ const EmployeesManagement = () => {
         const loadFromServer = async () => {
             try {
                 const res = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000"}/api/employees`,
+                    `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000"}/api/employees`,
                     { credentials: "include" }
                 );
 
@@ -148,7 +108,7 @@ const EmployeesManagement = () => {
         console.log("Deleting employee with id:", id);
         try {
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000"}/api/employees/${id}`,
+                `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000"}/api/employees/${id}`,
                 {
                     method: "DELETE",
                     credentials: "include",
@@ -194,9 +154,7 @@ const EmployeesManagement = () => {
         };
     }, [employees]); // Dependency: full list of employees
 
-    // ------------------------------------------------------------------
-    // 🛑 END OF HOOKS AND START OF CONDITIONAL RENDERING / JSX 🛑
-    // ------------------------------------------------------------------
+  
 
 
     const containerVariants = {

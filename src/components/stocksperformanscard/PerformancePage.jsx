@@ -117,8 +117,8 @@ const PerformancePage = () => {
     try {
       // Fetch products and sales
       const [productsRes, salesRes] = await Promise.all([
-        fetch(`${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000"}/api/products`, { credentials: "include" }),
-        fetch(`${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000"}/api/sales`, { credentials: "include" })
+        fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000"}/api/products`, { credentials: "include" }),
+        fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000"}/api/sales`, { credentials: "include" })
       ]);
 
       if (!productsRes.ok || !salesRes.ok) {

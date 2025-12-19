@@ -27,7 +27,7 @@ const ProductPage = () => {
         const loadFromServer = async () => {
             try {
                 const res = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000"}/api/products`,
+                    `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000"}/api/products`,
                     { credentials: "include" }
                 );
 
